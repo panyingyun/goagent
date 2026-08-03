@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#2563eb"/></marker></defs>
+<rect width="1200" height="760" fill="#faf8ff"/>
+<text x="40" y="48" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="26" font-weight="700">ch09 真实工具(HTTP/文件/命令/存储)</text>
+<text x="40" y="76" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="14">代码架构图 · 文件结构与调用流(基于最新代码生成)</text>
+
+<rect x="239" y="112" width="162" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="148.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">main.go</text><text x="320.0" y="176.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">入口 + 示例文件准备</text>
+<rect x="218" y="230" width="203" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="319.5" y="266.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">agent.go runReAct()</text><text x="319.5" y="294.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">ReAct 循环</text>
+<rect x="231" y="348" width="178" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="384.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">tools.go Registry</text><text x="320.0" y="412.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">6 个真实工具</text>
+<rect x="171" y="466" width="297" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="319.5" y="502.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">safePath() / allowedCommand()</text><text x="319.5" y="530.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">安全校验</text>
+<rect x="241" y="584" width="158" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="620.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">KVStore</text><text x="320.0" y="648.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">data/kv.json 持久化</text>
+<line x1="320.0" y1="208" x2="319.5" y2="230" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="319.5" y1="326" x2="320.0" y2="348" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="320.0" y1="444" x2="319.5" y2="466" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="319.5" y1="562" x2="320.0" y2="584" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="700" y="110" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="600">其他文件</text>
+<rect x="700" y="138" width="450" height="52" rx="8" fill="#f3f3fe" stroke="#c3c6d7" stroke-width="1"/>
+<text x="716" y="160" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">tools_test.go</text>
+<text x="716" y="178" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">路径穿越/白名单测试</text>
+<rect x="700" y="200" width="450" height="52" rx="8" fill="#f3f3fe" stroke="#c3c6d7" stroke-width="1"/>
+<text x="716" y="222" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">README.md</text>
+<text x="716" y="240" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">工具安全三原则</text>
+<text x="1190" y="744" fill="#737686" font-family="Microsoft YaHei, sans-serif" font-size="11" text-anchor="end">Go Agent 课程 ch01~ch26</text>
+</svg>
