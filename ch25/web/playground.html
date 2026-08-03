@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>LangServe 风格 Playground</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    textarea { width: 100%; height: 90px; padding: 8px; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+    button { padding: 8px 16px; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>LangServe 风格 Playground</h1>
+  <textarea id="input" placeholder="输入问题..."></textarea><br>
+  <button onclick="invoke()">/invoke</button>
+  <button onclick="stream()">/chat/stream</button>
+  <pre id="output"></pre>
+  <script>
+    const out = document.getElementById('output');
+    async function invoke() {
+      const r = await fetch('/invoke', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({input: document.getElementById('input').value})});
+      const d = await r.json();
+      out.textContent = d.output || JSON.stringify(d);
+    }
+    function stream() {
+      const q = encodeURIComponent(document.getElementById('input').value);
+      const es = new EventSource('/chat/stream?q=' + q);
+      out.textContent = '';
+      es.onmessage = e => { out.textContent += e.data; };
+      es.onerror = () => es.close();
+    }
+  </script>
+</body>
+</html>

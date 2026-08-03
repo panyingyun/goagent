@@ -1,0 +1,5 @@
+[
+  {"question": "12 * 8 + 4 等于多少?", "must_contain": "100"},
+  {"question": "2 + 3 * 4 等于多少?", "must_contain": "14"},
+  {"question": "10 / 4 等于多少?", "must_contain": "2.5"}
+]

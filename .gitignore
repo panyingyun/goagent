@@ -28,3 +28,17 @@ go.work
 dist/
 build/
 bin/
+
+# 课程运行时生成的文件
+ch06/memory.json
+ch08/index.json
+ch09/data/
+ch09/docs/notes.txt
+ch14/checkpoint.json
+ch23/checkpoint.json
+ch26/backend/*.db
+ch26/frontend/node_modules/
+ch26/frontend/dist/
+ch26/data/
+ch26/frontend/node_modules/
+ch26/frontend/dist/

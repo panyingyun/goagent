@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Go Agent 聊天室</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    #log { border: 1px solid #ddd; border-radius: 8px; padding: 12px; min-height: 300px; margin-bottom: 12px; }
+    .msg { margin: 8px 0; }
+    .user { color: #1550b0; }
+    .bot { color: #333; white-space: pre-wrap; }
+    input { width: 70%; padding: 8px; }
+    button { padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <h1>Go Agent 聊天室</h1>
+  <div id="log"></div>
+  <input id="q" placeholder="输入问题,回车发送" onkeydown="if(event.key==='Enter')send(false)">
+  <button onclick="send(false)">发送</button>
+  <button onclick="send(true)">流式</button>
+  <script>
+    const log = document.getElementById('log');
+    function add(role, text) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = (role === 'user' ? '你: ' : 'Agent: ') + text;
+      log.appendChild(div);
+      return div;
+    }
+    async function send(stream) {
+      const q = document.getElementById('q').value.trim();
+      if (!q) return;
+      add('user', q);
+      document.getElementById('q').value = '';
+      if (!stream) {
+        const r = await fetch('/chat', {method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({question: q})});
+        const d = await r.json();
+        add('bot', d.answer);
+      } else {
+        const div = add('bot', '');
+        const es = new EventSource('/chat/stream?q=' + encodeURIComponent(q));
+        es.onmessage = e => { div.textContent = 'Agent: ' + e.data; };
+        es.onerror = () => es.close();
+        es.addEventListener('close', () => es.close());
+      }
+    }
+  </script>
+</body>
+</html>
