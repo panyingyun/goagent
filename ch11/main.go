@@ -79,6 +79,7 @@ func main() {
 		Content: "判断下面评论的情感,只输出 JSON:\n" +
 			`{"sentiment": "正面|负面|中性", "confidence": 0~1, "reason": "一句话理由"}` + "\n评论: " + question,
 	}})
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	} else {

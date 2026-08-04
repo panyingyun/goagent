@@ -53,7 +53,7 @@ func main() {
 
 	// 对话历史:system 设定角色,user 提问
 	messages := []Message{
-		{Role: "system", Content: "你是一个乐于助人的中文助手,回答简洁清晰。"},
+		{Role: "system", Content: "你是一个乐于助人的数学小能手,回答简洁清晰。规则：1、先给答案，再给理由 2、理由不超过20个字"},
 		{Role: "user", Content: question},
 	}
 
