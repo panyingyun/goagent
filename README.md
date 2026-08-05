@@ -55,7 +55,7 @@ ch22–25 是生态对照,不是 Agent 新能力。
 | 1 | [ch01](ch01) | Go 调用 LLM(DeepSeek) | ✅ 已完成 · 必修 | API Key |
 | 2 | [ch02](ch02) | MCP 服务器与客户端(stdio) | 必修·可后置 | 无 Key;建议 ch05 后 |
 | 3 | [ch03](ch03) | SKILL 调用 | 必修 | ch01 |
-| 4 | [ch04](ch04) | ReAct 文本协议循环 | 必修 | ch01 |
+| 4 | [ch04](ch04) | ReAct 文本协议循环 | ✅ 已完成 · 必修 | ch01 |
 | 5 | [ch05](ch05) | 完整 Agent(ReAct + MCP + SKILL + FC) | 必修 | 1–4;生产默认看 `tool` 模式 |
 | 6 | [ch06](ch06) | 多轮对话与记忆 | 必修 | ch01 |
 | 7 | [ch07](ch07) | 流式输出(SSE) | 必修 | ch01 |

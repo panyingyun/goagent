@@ -91,7 +91,7 @@ func registerDefaultTools(r *Registry) {
 			},
 			"required": []string{"expression"},
 		},
-		Run: func(_ context.Context, args map[string]any) (string, error) {
+		Run: func(ctx context.Context, args map[string]any) (string, error) {
 			expr, _ := args["expression"].(string)
 			expr = strings.TrimSpace(expr)
 			if expr == "" {
@@ -112,7 +112,7 @@ func registerDefaultTools(r *Registry) {
 			"type":       "object",
 			"properties": map[string]any{},
 		},
-		Run: func(_ context.Context, _ map[string]any) (string, error) {
+		Run: func(ctx context.Context, args map[string]any) (string, error) {
 			loc, err := time.LoadLocation("Asia/Shanghai")
 			if err != nil {
 				return "", err

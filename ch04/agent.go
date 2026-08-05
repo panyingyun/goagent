@@ -57,9 +57,12 @@ func runReAct(ctx context.Context, llm *LLMClient, reg *Registry, userInput stri
 		if err != nil {
 			return "", err
 		}
+		fmt.Printf("[YYPAN]  reply = [%v]\n", reply)
 		messages = append(messages, reply)
 		content := strings.TrimSpace(reply.Content)
 		fmt.Fprintln(os.Stderr, content)
+
+		//fmt.Printf("[YYPAN] messages = [[[[[======= %v =======]]]]\n", messages)
 
 		if final := extractFinalAnswer(content); final != "" {
 			return final, nil
@@ -73,11 +76,13 @@ func runReAct(ctx context.Context, llm *LLMClient, reg *Registry, userInput stri
 			})
 			continue
 		}
-
+		fmt.Printf("[YYPAN]  action = [%v]\n", action)
+		fmt.Printf("[YYPAN]  input = [%v]\n", input)
 		obs, err := reg.Run(ctx, action, input)
 		if err != nil {
 			obs = "错误: " + err.Error()
 		}
+		fmt.Printf("[YYPAN]  obs = [%v]\n", obs)
 		fmt.Fprintf(os.Stderr, "Observation: %s\n", obs)
 		messages = append(messages, Message{Role: RoleUser, Content: "Observation: " + obs})
 	}
