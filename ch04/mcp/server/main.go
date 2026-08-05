@@ -1,17 +1,23 @@
 // 一个最小的 MCP(Model Context Protocol)服务器。
 //
-// MCP 服务器通过标准输入输出(stdin/stdout)与客户端通信:
-// 每一行是一个 JSON-RPC 2.0 消息(换行分隔的 JSON)。
+// 协议:JSON-RPC 2.0,每一行一个 JSON 消息。
 // 实现 initialize、tools/list、tools/call 三个方法就够 Agent 使用了。
 //
-// 运行方式: go run ./mcp/server
+// 运行方式:
+//
+//	# 手动启动(推荐,给 Agent 用):默认监听 127.0.0.1:8765
+//	go run ./mcp/server
 package main
 
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
+	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -42,9 +48,42 @@ type callParams struct {
 }
 
 func main() {
-	fmt.Fprintln(os.Stderr, "[mcp-server] 已启动,等待 JSON-RPC 请求...")
-	scanner := bufio.NewScanner(os.Stdin)
-	enc := json.NewEncoder(os.Stdout)
+	addr := flag.String("addr", "127.0.0.1:8765", "TCP 监听地址")
+	flag.Parse()
+
+	if *addr == "" || *addr == "stdio" {
+		fmt.Fprintln(os.Stderr, "[mcp-server] stdio 模式已启动,等待 JSON-RPC 请求...")
+		serveConn(os.Stdin, os.Stdout)
+		return
+	}
+	serveTCP(*addr)
+}
+
+func serveTCP(addr string) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "[mcp-server] 监听失败:", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stderr, "[mcp-server] 已监听 %s,等待客户端连接...\n", ln.Addr())
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "[mcp-server] Accept 失败:", err)
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "[mcp-server] 客户端已连接: %s\n", conn.RemoteAddr())
+		go func(c net.Conn) {
+			defer c.Close()
+			serveConn(c, c)
+			fmt.Fprintf(os.Stderr, "[mcp-server] 客户端断开: %s\n", c.RemoteAddr())
+		}(conn)
+	}
+}
+
+func serveConn(in io.Reader, out io.Writer) {
+	scanner := bufio.NewScanner(in)
+	enc := json.NewEncoder(out)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(trimSpace(line)) == 0 {
@@ -58,7 +97,7 @@ func main() {
 		handle(enc, req)
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "[mcp-server] stdin 读取错误:", err)
+		fmt.Fprintln(os.Stderr, "[mcp-server] 读取错误:", err)
 	}
 }
 
@@ -126,7 +165,7 @@ func callTool(p callParams) (string, error) {
 	switch p.Name {
 	case "echo":
 		text, _ := p.Arguments["text"].(string)
-		return "echo: " + text, nil
+		return "echo: " + strings.ToUpper(text), nil
 	case "get_time":
 		return time.Now().Format("2006-01-02 15:04:05"), nil
 	default:

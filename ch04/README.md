@@ -51,11 +51,11 @@ go run . "12 * 8 + 4 等于多少?"
 # 原生 Function Calling 模式
 go run . -mode tool "2 + 3 * 4 等于多少?"
 
-# 接入 MCP(先编译课时2的服务器)
-New-Item -ItemType Directory -Force bin
-go build -o bin\mcp-server.exe .\mcp\server
-go run . -mcp-server bin\mcp-server.exe "用 mcp 工具调用 echo,内容写 hello"
+# 接入 MCP:先手动启动服务器(终端 1),再跑 Agent(终端 2);默认地址均为 127.0.0.1:8765
+go run ./mcp/server
+go run . -mode tool "用 mcp 工具调用 echo,内容写 hello"
 ```
+
 
 离线验证(不需要 API Key):
 

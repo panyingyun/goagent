@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,15 +16,15 @@ import (
 )
 
 // MCPClient 是一个最小的 MCP(Model Context Protocol)客户端:
-// 把 MCP 服务器当作子进程启动,通过 stdio(标准输入/输出)用
-// JSON-RPC 2.0 通信,每一行一个 JSON 消息。
+// 通过 JSON-RPC 2.0(每行一个 JSON)与 MCP 服务器通信。
 //
-// 完整协议远不止这些(资源、提示、采样、能力协商等),
-// 但一个能跑的 Agent 只需要 initialize + tools/list + tools/call 三个方法。
+// 日常用法:你先手动启动服务器(TCP),再 ConnectMCPClient 连上去。
+// 测试用法:StartMCPClient 仍可按 stdio 拉起子进程(见 react_test.go)。
 const mcpProtocolVersion = "2025-06-18"
 
 type MCPClient struct {
-	cmd     *exec.Cmd
+	cmd     *exec.Cmd // 仅 StartMCPClient 使用;手动连接时为 nil
+	conn    net.Conn  // 仅 ConnectMCPClient 使用
 	stdin   io.WriteCloser
 	scanner *bufio.Scanner
 	nextID  int
@@ -41,8 +42,31 @@ type mcpResponse struct {
 	} `json:"error"`
 }
 
+// ConnectMCPClient 连接到已手动启动的 MCP 服务器。
+// addr 形如 "127.0.0.1:8765"(服务器需用 -addr 监听)。
+func ConnectMCPClient(ctx context.Context, addr string) (*MCPClient, error) {
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("连接 MCP 服务器 %s 失败: %w(请先手动启动: go run ./mcp/server)", addr, err)
+	}
+	c := &MCPClient{
+		conn:    conn,
+		stdin:   conn,
+		scanner: bufio.NewScanner(conn),
+		pending: map[int]chan json.RawMessage{},
+	}
+	go c.readLoop()
+	if err := c.handshake(ctx); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
+
+// StartMCPClient 把 MCP 服务器当作子进程启动(stdio)。仅测试使用。
 func StartMCPClient(ctx context.Context, binary string) (*MCPClient, error) {
-	cmd := exec.CommandContext(ctx, binary)
+	cmd := exec.CommandContext(ctx, binary, "-addr", "stdio")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -63,18 +87,23 @@ func StartMCPClient(ctx context.Context, binary string) (*MCPClient, error) {
 		pending: map[int]chan json.RawMessage{},
 	}
 	go c.readLoop()
+	if err := c.handshake(ctx); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
 
-	// 协议握手:initialize -> notifications/initialized
+func (c *MCPClient) handshake(ctx context.Context) error {
 	if _, err := c.call(ctx, "initialize", map[string]any{
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{},
 		"clientInfo":      map[string]any{"name": "agent-demo", "version": "0.1.0"},
 	}); err != nil {
-		c.Close()
-		return nil, err
+		return err
 	}
 	c.notify("notifications/initialized", map[string]any{})
-	return c, nil
+	return nil
 }
 
 // readLoop 持续读服务器输出,把响应分发到等待的 channel。
@@ -139,7 +168,7 @@ func (c *MCPClient) call(ctx context.Context, method string, params any) (json.R
 func (c *MCPClient) notify(method string, params any) {
 	msg := map[string]any{"jsonrpc": "2.0", "method": method, "params": params}
 	if data, err := json.Marshal(msg); err == nil {
-		c.stdin.Write(append(data, '\n'))
+		_, _ = c.stdin.Write(append(data, '\n'))
 	}
 }
 
@@ -160,8 +189,8 @@ func (c *MCPClient) CallTool(ctx context.Context, name string, args map[string]a
 		return "", err
 	}
 	var texts []string
-	for _, c := range result.Content {
-		texts = append(texts, c.Text)
+	for _, item := range result.Content {
+		texts = append(texts, item.Text)
 	}
 	if result.IsError {
 		return "", errors.New(strings.Join(texts, "\n"))
@@ -170,8 +199,10 @@ func (c *MCPClient) CallTool(ctx context.Context, name string, args map[string]a
 }
 
 func (c *MCPClient) Close() {
-	if c.stdin != nil {
-		c.stdin.Close()
+	if c.conn != nil {
+		_ = c.conn.Close()
+	} else if c.stdin != nil {
+		_ = c.stdin.Close()
 	}
 	if c.cmd != nil && c.cmd.Process != nil {
 		_ = c.cmd.Process.Kill()

@@ -12,7 +12,7 @@ import (
 func main() {
 	var (
 		mode      = flag.String("mode", "react", "运行模式: react(文本 ReAct)或 tool(原生函数调用)")
-		mcpServer = flag.String("mcp-server", "", "MCP 服务器可执行文件路径;设置后注册 mcp 工具")
+		mcpAddr   = flag.String("mcp-addr", "127.0.0.1:8765", "MCP 服务器地址;传 -mcp-addr= 可关闭")
 		skillsDir = flag.String("skills", "skills", "SKILL 文件目录(存放 *.md)")
 	)
 	flag.Parse()
@@ -36,15 +36,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "已加载 %d 个 SKILL: %s\n", len(skills), skillNames(skills))
 	}
 
-	if *mcpServer != "" {
-		client, err := StartMCPClient(context.Background(), *mcpServer)
+	if *mcpAddr != "" {
+		client, err := ConnectMCPClient(context.Background(), *mcpAddr)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "MCP 连接失败:", err)
 			os.Exit(1)
 		}
 		defer client.Close()
 		registerMCPTool(reg, client)
-		fmt.Fprintln(os.Stderr, "已通过 MCP 注册外部工具(工具名: mcp)")
+		fmt.Fprintf(os.Stderr, "已连接 MCP 服务器 %s(工具名: mcp)\n", *mcpAddr)
 	}
 
 	input := strings.Join(flag.Args(), " ")
