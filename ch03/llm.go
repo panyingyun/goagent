@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// 与课时4 相同的 DeepSeek 客户端。
+// 与课时1 相同:DeepSeek 的 OpenAI 兼容 Chat Completions 客户端。
 const defaultBaseURL = "https://api.deepseek.com"
 
 type Role string

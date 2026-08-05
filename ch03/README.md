@@ -1,23 +1,23 @@
-# 课时3:Go 实现 SKILL 调用
+# 课时3:Go 实现 ReAct
 
-> 目标:理解 SKILL 的本质——把"行为说明书"打包成文件,注入系统提示词。
+> 目标:亲手实现"思考-行动-观察"循环,让 LLM 学会调用工具。
 
 ## 本课时学什么
 
-- SKILL(技能)是 Codex / Claude 里的概念:一段给 LLM 的指令 + 参考资料 + 可能的脚本/模板,
-  按约定格式放在目录里,需要时加载;
-- 它**不是给 Go 程序用的库**,而是给 LLM 的"提示词包"——所以实现上很简单:
-  读文件 → 拼进 system 消息 → 模型遵守;
-- 好处:行为规范可以版本化管理、复用、按场景组合,不用改一行程序代码。
+- LLM 只会"说"不会"做",所以我们在外面套一个循环,把模型和工具接起来;
+- ReAct = Reasoning + Acting,是 Agent 最经典的循环范式;
+- 关键技巧:系统提示词里约定**文本协议**(Thought / Action / Action Input),
+  框架解析并执行工具,把结果以 `Observation` 放回对话,模型继续思考。
 
 ## 目录结构
 
 ```text
 ch03/
-├── main.go                # 加载 skills/*.md -> 拼进 system -> 问 DeepSeek
-├── skills/
-│   ├── math-tutor.md      # 技能1:数学题必须按"公式/代入/结果"三步回答
-│   └── translator.md      # 技能2:翻译必须按"原文/译文"格式输出
+├── main.go        # 入口
+├── llm.go         # LLM 客户端(课时1 的内容)
+├── tools.go       # 工具注册表 + calculator / get_time 两个工具
+├── agent.go       # 核心:ReAct 循环 + 文本协议解析
+├── agent_test.go  # 用本地 mock LLM 测试,离线可跑
 └── README.md
 ```
 
@@ -26,31 +26,48 @@ ch03/
 ```powershell
 cd E:\codex\project001\ch03
 go run . "12 * 8 + 4 等于多少?"
-go run . "把 Hello world 翻译成中文"
+go run . "现在北京时间几点?"
 ```
 
-注意观察:同一个模型,加载技能后,回答格式会严格按技能要求走——
-这就是"提示词即技能"的效果。
+你会看到完整循环的每一步:Thought → Action → Observation → Final Answer。
 
-## 技能文件长什么样
+不联网也能验证逻辑:
 
-```markdown
-# math-tutor
-
-当用户提出数学问题时,必须严格按以下三步回答…
+```powershell
+go test ./... -v
 ```
 
-约定:第一行 `# 技能名` 是名字,其余全部是给 LLM 的指令。
+## ReAct 循环图
+
+```mermaid
+flowchart TD
+    A[用户问题] --> B[LLM 思考 Thought]
+    B --> C{需要工具?}
+    C -- 是 --> D[Action + Action Input]
+    D --> E[执行工具,得到 Observation]
+    E --> B
+    C -- 否 --> F[Final Answer]
+    F --> G[返回给用户]
+```
+
+## 代码怎么组织
+
+1. `buildSystemPrompt` 把"输出格式 + 工具列表"拼进 system 消息,告诉模型
+   什么时候该输出 Action、输出什么工具名;
+2. `runReAct` 是主循环:调 LLM → 检查有没有 `Final Answer` → 没有就解析
+   `Action` → `Registry.Run` 执行工具 → 把 `Observation` 追加进对话 → 再来一轮;
+3. `parseReAct` / `extractFinalAnswer` 用正则和花括号配对解析模型文本。
 
 ## 练习
 
-1. 新建 `skills/poet.md`,让模型用七言绝句回答任何问题,验证生效;
-2. 删掉一个技能文件,对比回答变化,体会"技能 = 行为开关";
-3. 想一想:如果技能很多(几十个),全部塞进 system 会有什么问题?
-   (提示:上下文长度和注意力——这也是真实框架要做技能选择的原因。)
+1. 在 `tools.go` 里加一个 `random` 工具(返回随机数),注册后试试
+   "给我一个 1 到 100 的随机数",观察模型会不会用;
+2. 把 `maxIterations` 改成 2,问一个需要 3 步的问题,观察 Agent 怎么"认输";
+3. 思考:如果模型输出了 `Action Input: {expression: "..."}`(参数名没加引号),
+   Agent 会怎样?——这就是文本协议的脆弱点,也是课时4 里
+   Function Calling(结构化工具调用)更稳的原因。
 
 ## 小结
 
-SKILL 的实现是"提示词管理",但它的价值在工程层面:把模型的行为规范
-当成可维护的文件资产。课时 4 的 ReAct 会在循环里叠加工具,课时 5
-会把 SKILL 和工具、MCP 一起装进一个完整 Agent。
+到这里,你已经有一个"会调用工具"的 Agent 了。课时4 会把 SKILL、
+MCP、Function Calling 全部装进来,组成完整的课程案例。

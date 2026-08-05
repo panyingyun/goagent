@@ -7,10 +7,10 @@
 | LangChain 概念 | 本课实现 | 我们之前的代码 |
 |---|---|---|
 | Chain | `Chain` 接口 | 任意"输入->输出"函数 |
-| LLMChain | 系统提示词 + LLM | ch02 的 chat |
+| LLMChain | 系统提示词 + LLM | ch16 的 chat |
 | SequentialChain | 链式串联 | 流水线思维 |
 | Memory | 消息记忆 | ch06 的 History |
-| Tool / AgentExecutor | 工具 + ReAct 循环 | ch04 的 Registry + runReAct |
+| Tool / AgentExecutor | 工具 + ReAct 循环 | ch03 的 Registry + runReAct |
 
 ## 运行
 

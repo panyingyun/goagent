@@ -1,10 +1,13 @@
-// 一个最小的 MCP(Model Context Protocol)服务器。
+// 课时16:MCP 服务器(Server)
 //
-// MCP 服务器通过标准输入输出(stdin/stdout)与客户端通信:
-// 每一行是一个 JSON-RPC 2.0 消息(换行分隔的 JSON)。
-// 实现 initialize、tools/list、tools/call 三个方法就够 Agent 使用了。
+// MCP(Model Context Protocol)是"AI 世界的 USB-C":服务器把工具暴露出来,
+// 任何支持 MCP 的客户端都能即插即用。本课时用标准库实现最小服务器:
+// 通过 stdin/stdout 通信,每一行是一个 JSON-RPC 2.0 消息。
 //
-// 运行方式: go run ./mcp/server
+// 运行:
+//   go run ./server
+// 也可以直接把 JSON 请求喂给它,体验协议本身:
+//   '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | go run ./server
 package main
 
 import (
@@ -12,15 +15,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
-	"time"
+	"strconv"
 )
 
 const protocolVersion = "2025-06-18"
 
+// request 是客户端发来的 JSON-RPC 请求。
+// 注意:通知(notification)没有 id,所以我们用 json.RawMessage 来区分"有/无 id"。
 type request struct {
 	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"` // 通知消息没有 id
+	ID      json.RawMessage `json:"id"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params"`
 }
@@ -37,13 +41,14 @@ type rpcError struct {
 	Message string `json:"message"`
 }
 
+// callParams 是 tools/call 的参数:{name: 工具名, arguments: 参数对象}
 type callParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
 }
 
 func main() {
-	fmt.Fprintln(os.Stderr, "[mcp-server] 已启动,等待 JSON-RPC 请求...")
+	fmt.Fprintln(os.Stderr, "[MCP 服务器] 已启动,从 stdin 读取 JSON-RPC 请求...")
 	scanner := bufio.NewScanner(os.Stdin)
 	enc := json.NewEncoder(os.Stdout)
 	for scanner.Scan() {
@@ -58,44 +63,41 @@ func main() {
 		}
 		handle(enc, req)
 	}
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "[mcp-server] stdin 读取错误:", err)
-	}
 }
 
+// handle 按方法分发。MCP 最小闭环只需要三个方法:
+// initialize(握手)、tools/list(列出工具)、tools/call(调用工具)。
 func handle(enc *json.Encoder, req request) {
 	id := req.ID
 	switch req.Method {
 	case "initialize":
+		// 握手:告诉客户端协议版本、能力、服务器信息
 		sendResult(enc, id, map[string]any{
 			"protocolVersion": protocolVersion,
-			"capabilities": map[string]any{
-				"tools": map[string]any{"listChanged": false},
-			},
-			"serverInfo": map[string]any{"name": "demo-mcp-server", "version": "0.1.0"},
+			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
+			"serverInfo":      map[string]any{"name": "ch16-mcp-server", "version": "0.1.0"},
 		})
 
 	case "notifications/initialized":
-		// 通知:无需回复
+		// 通知:不需要回复
 
 	case "tools/list":
 		sendResult(enc, id, map[string]any{
 			"tools": []any{
-				map[string]any{
-					"name":        "echo",
-					"description": "把输入原样返回,用于测试 MCP 链路。",
-					"inputSchema": map[string]any{
-						"type": "object",
-						"properties": map[string]any{
-							"text": map[string]any{"type": "string"},
-						},
+				toolDef("echo", "把输入原样返回", map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"text": map[string]any{"type": "string"},
 					},
-				},
-				map[string]any{
-					"name":        "get_time",
-					"description": "返回服务器所在机器的当前时间。",
-					"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
-				},
+				}),
+				toolDef("add", "计算两个数字相加", map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"a": map[string]any{"type": "number"},
+						"b": map[string]any{"type": "number"},
+					},
+					"required": []string{"a", "b"},
+				}),
 			},
 		})
 
@@ -123,15 +125,39 @@ func handle(enc *json.Encoder, req request) {
 	}
 }
 
+// toolDef 生成 tools/list 里一个工具的描述结构。
+func toolDef(name, desc string, schema map[string]any) map[string]any {
+	return map[string]any{"name": name, "description": desc, "inputSchema": schema}
+}
+
+// callTool 是服务器真正的"干活"逻辑:根据工具名分发到具体函数。
 func callTool(p callParams) (string, error) {
 	switch p.Name {
 	case "echo":
 		text, _ := p.Arguments["text"].(string)
-		return "echo: " + strings.ToUpper(text), nil
-	case "get_time":
-		return time.Now().Format("2006-01-02 15:04:05"), nil
+		return "echo: " + text, nil
+	case "add":
+		a, okA := toFloat(p.Arguments["a"])
+		b, okB := toFloat(p.Arguments["b"])
+		if !okA || !okB {
+			return "", fmt.Errorf("参数 a、b 必须是数字")
+		}
+		return strconv.FormatFloat(a+b, 'f', -1, 64), nil
 	default:
 		return "", fmt.Errorf("未知工具: %s", p.Name)
+	}
+}
+
+// toFloat 兼容 JSON 数字(默认 float64)和字符串形式的数字。
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case string:
+		f, err := strconv.ParseFloat(n, 64)
+		return f, err == nil
+	default:
+		return 0, false
 	}
 }
 

@@ -11,15 +11,35 @@ import (
 	"time"
 )
 
+// 与课时1 相同的 DeepSeek 客户端:"想"由 DeepSeek 负责。
 const defaultBaseURL = "https://api.deepseek.com"
 
+type Role string
+
+const (
+	RoleSystem    Role = "system"
+	RoleUser      Role = "user"
+	RoleAssistant Role = "assistant"
+)
+
 type Message struct {
-	Role    string `json:"role"`
+	Role    Role   `json:"role"`
 	Content string `json:"content"`
 }
 
-type ChatLLM interface {
-	Chat(ctx context.Context, messages []Message) (Message, error)
+type chatRequest struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+	Stream   bool      `json:"stream"`
+}
+
+type chatResponse struct {
+	Choices []struct {
+		Message Message `json:"message"`
+	} `json:"choices"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 type LLMClient struct {
@@ -46,32 +66,39 @@ func envOr(key, def string) string {
 }
 
 func (c *LLMClient) Chat(ctx context.Context, messages []Message) (Message, error) {
-	body, _ := json.Marshal(map[string]any{"model": c.Model, "messages": messages, "stream": false})
+	body, err := json.Marshal(chatRequest{Model: c.Model, Messages: messages})
+	if err != nil {
+		return Message{}, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return Message{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return Message{}, fmt.Errorf("请求失败: %w", err)
+		return Message{}, fmt.Errorf("请求 DeepSeek 失败: %w", err)
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return Message{}, fmt.Errorf("API 返回 %d: %s", resp.StatusCode, string(data))
-	}
-	var out struct {
-		Choices []struct {
-			Message Message `json:"message"`
-		} `json:"choices"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return Message{}, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return Message{}, fmt.Errorf("DeepSeek 返回 %d: %s", resp.StatusCode, string(data))
+	}
+	var out chatResponse
+	if err := json.Unmarshal(data, &out); err != nil {
+		return Message{}, fmt.Errorf("解析响应失败: %w", err)
+	}
+	if out.Error != nil {
+		return Message{}, fmt.Errorf("DeepSeek 错误: %s", out.Error.Message)
+	}
 	if len(out.Choices) == 0 {
-		return Message{}, fmt.Errorf("没有 choices")
+		return Message{}, fmt.Errorf("响应中没有 choices")
 	}
 	return out.Choices[0].Message, nil
 }

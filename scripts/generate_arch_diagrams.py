@@ -255,52 +255,31 @@ CHAPTERS = {
         ],
     },
     "ch02": {
-        "title": "ch02 Go 实现 MCP 服务器与客户端",
+        "title": "ch02 提示词工程",
         "code": {
             "flow": [
-                ("client/main.go", "启动服务器子进程"),
-                ("MCPClient", "stdio + JSON-RPC 2.0"),
-                ("initialize / tools/list / tools/call", "协议消息"),
-                ("server/main.go", "handle() 按方法分发"),
-                ("callTool()", "echo / add 工具执行"),
+                ("main.go", "读取待分析文本"),
+                ("技巧1 系统提示词", "角色 + 规则"),
+                ("技巧2 few-shot", "例子引导"),
+                ("技巧3 结构化输出", "JSON + 校验"),
+                ("extractJSON() / validateResult()", "解析与兜底"),
             ],
-            "extra": [("README.md", "协议讲解与运行方式")],
+            "extra": [
+                ("prompt_test.go", "few-shot/JSON 测试"),
+                ("README.md", "三大技巧讲解"),
+            ],
         },
         "biz": [
-            ("客户端", "JSON-RPC 请求"),
-            ("stdio 管道", "每行一个 JSON 消息"),
-            ("MCP 服务器", "initialize 握手"),
-            ("tools/list", "列出工具"),
-            ("tools/call", "调用 echo / add"),
-            ("返回结果", "result.content"),
+            ("文本输入", "情感分析"),
+            ("系统提示词", "角色 + 规则"),
+            ("few-shot 示例", "正面/负面/中性"),
+            ("JSON 输出要求", "sentiment/confidence"),
+            ("解析校验", "枚举值检查"),
+            ("结论", "结构化结果"),
         ],
     },
     "ch03": {
-        "title": "ch03 Go 实现 SKILL 调用",
-        "code": {
-            "flow": [
-                ("main.go", "读取用户问题"),
-                ("loadSkills()", "读取 skills/*.md"),
-                ("拼接 system 提示词", "技能注入提示词"),
-                ("chat()", "调用 DeepSeek"),
-                ("输出回复", "模型遵守技能"),
-            ],
-            "extra": [
-                ("skills/math-tutor.md", "数学三步回答规范"),
-                ("skills/translator.md", "翻译格式规范"),
-                ("README.md", "SKILL 概念讲解"),
-            ],
-        },
-        "biz": [
-            ("skills/*.md", "行为说明书(提示词资产)"),
-            ("loadSkills()", "读取并解析文件名"),
-            ("注入 system", "## 你掌握的技能(SKILL)"),
-            ("DeepSeek", "遵守技能规范"),
-            ("回答", "按技能格式输出"),
-        ],
-    },
-    "ch04": {
-        "title": "ch04 Go 实现 ReAct 循环",
+        "title": "ch03 Go 实现 ReAct 循环",
         "code": {
             "flow": [
                 ("main.go", "入口:读取问题"),
@@ -323,8 +302,8 @@ CHAPTERS = {
             ("最终答案", "返回给用户"),
         ],
     },
-    "ch05": {
-        "title": "ch05 综合 Agent(ReAct + MCP + SKILL + LLM)",
+    "ch04": {
+        "title": "ch04 综合 Agent(ReAct + MCP + SKILL + LLM)",
         "code": {
             "flow": [
                 ("main.go", "模式选择 react / tool"),
@@ -347,6 +326,30 @@ CHAPTERS = {
             ("MCP 客户端", "stdio JSON-RPC"),
             ("MCP 服务器", "echo / get_time"),
             ("最终回答", "Final Answer"),
+        ],
+    },
+    "ch05": {
+        "title": "ch05 Go 实现 SKILL 调用",
+        "code": {
+            "flow": [
+                ("main.go", "读取用户问题"),
+                ("loadSkills()", "读取 skills/*.md"),
+                ("拼接 system 提示词", "技能注入提示词"),
+                ("chat()", "调用 DeepSeek"),
+                ("输出回复", "模型遵守技能"),
+            ],
+            "extra": [
+                ("skills/math-tutor.md", "数学三步回答规范"),
+                ("skills/translator.md", "翻译格式规范"),
+                ("README.md", "SKILL 概念讲解"),
+            ],
+        },
+        "biz": [
+            ("skills/*.md", "行为说明书(提示词资产)"),
+            ("loadSkills()", "读取并解析文件名"),
+            ("注入 system", "## 你掌握的技能(SKILL)"),
+            ("DeepSeek", "遵守技能规范"),
+            ("回答", "按技能格式输出"),
         ],
     },
     "ch06": {
@@ -398,33 +401,7 @@ CHAPTERS = {
         ],
     },
     "ch08": {
-        "title": "ch08 RAG 入门(路线B:OpenAI embedding)",
-        "code": {
-            "flow": [
-                ("main.go", "索引 + 问答入口"),
-                ("rag.go", "切块 / Index 构建 / 检索"),
-                ("embedder.go", "OpenAI text-embedding-3-small"),
-                ("vector.go", "余弦相似度"),
-                ("llm.go", "DeepSeek 回答"),
-            ],
-            "extra": [
-                ("docs/sample.txt", "示例公司制度"),
-                ("rag_test.go", "切块/检索/mock 测试"),
-                ("README.md", "RAG 流程讲解"),
-            ],
-        },
-        "biz": [
-            ("文档 docs/*.txt", "私有知识"),
-            ("切块 chunk", "每块 ≤300 字"),
-            ("向量化", "OpenAI embedding"),
-            ("索引 index.json", "片段 + 向量"),
-            ("问题向量化", "余弦检索 top-3"),
-            ("片段注入提示词", "system 资料"),
-            ("DeepSeek 回答", "基于资料"),
-        ],
-    },
-    "ch09": {
-        "title": "ch09 真实工具(HTTP/文件/命令/存储)",
+        "title": "ch08 真实工具(HTTP/文件/命令/存储)",
         "code": {
             "flow": [
                 ("main.go", "入口 + 示例文件准备"),
@@ -447,57 +424,8 @@ CHAPTERS = {
             ("最终回答", "环境信息"),
         ],
     },
-    "ch10": {
-        "title": "ch10 评估、安全与工程化",
-        "code": {
-            "flow": [
-                ("main.go", "-eval / HTTP 服务双模式"),
-                ("agent.go runReAct()", "ChatLLM 接口注入"),
-                ("eval.go", "评估用例 + 断言"),
-                ("retry.go / security.go", "重试 + 注入防护"),
-                ("logging.go", "结构化 JSON 日志"),
-            ],
-            "extra": [
-                ("eval/cases.json", "3 个回归用例"),
-                ("ch10_test.go", "重试/防护/HTTP 测试"),
-                ("README.md", "工程化讲解"),
-            ],
-        },
-        "biz": [
-            ("HTTP 请求 /api/chat", "POST JSON"),
-            ("Guard 检测", "提示注入防御"),
-            ("Retry 重试", "指数退避"),
-            ("ReAct 执行", "工具调用"),
-            ("结构化日志", "trace 记录"),
-            ("评估模式", "-eval 回归测试"),
-        ],
-    },
-    "ch11": {
-        "title": "ch11 提示词工程",
-        "code": {
-            "flow": [
-                ("main.go", "读取待分析文本"),
-                ("技巧1 系统提示词", "角色 + 规则"),
-                ("技巧2 few-shot", "例子引导"),
-                ("技巧3 结构化输出", "JSON + 校验"),
-                ("extractJSON() / validateResult()", "解析与兜底"),
-            ],
-            "extra": [
-                ("prompt_test.go", "few-shot/JSON 测试"),
-                ("README.md", "三大技巧讲解"),
-            ],
-        },
-        "biz": [
-            ("文本输入", "情感分析"),
-            ("系统提示词", "角色 + 规则"),
-            ("few-shot 示例", "正面/负面/中性"),
-            ("JSON 输出要求", "sentiment/confidence"),
-            ("解析校验", "枚举值检查"),
-            ("结论", "结构化结果"),
-        ],
-    },
-    "ch12": {
-        "title": "ch12 向量数据库与高级 RAG",
+    "ch09": {
+        "title": "ch09 向量数据库与高级 RAG",
         "code": {
             "flow": [
                 ("main.go", "索引 + 问答"),
@@ -522,8 +450,8 @@ CHAPTERS = {
             ("DeepSeek 回答", "基于片段"),
         ],
     },
-    "ch13": {
-        "title": "ch13 工具进阶与并行调用",
+    "ch10": {
+        "title": "ch10 工具进阶与并行调用",
         "code": {
             "flow": [
                 ("main.go", "入口 + 演示工具"),
@@ -546,8 +474,8 @@ CHAPTERS = {
             ("LLM 汇总", "最终回答"),
         ],
     },
-    "ch14": {
-        "title": "ch14 Agent 工作流与任务规划",
+    "ch11": {
+        "title": "ch11 Agent 工作流与任务规划",
         "code": {
             "flow": [
                 ("main.go", "-plan / -run / -resume"),
@@ -570,8 +498,123 @@ CHAPTERS = {
             ("断点续跑", "-resume"),
         ],
     },
+    "ch12": {
+        "title": "ch12 评估、安全与工程化",
+        "code": {
+            "flow": [
+                ("main.go", "-eval / HTTP 服务双模式"),
+                ("agent.go runReAct()", "ChatLLM 接口注入"),
+                ("eval.go", "评估用例 + 断言"),
+                ("retry.go / security.go", "重试 + 注入防护"),
+                ("logging.go", "结构化 JSON 日志"),
+            ],
+            "extra": [
+                ("eval/cases.json", "3 个回归用例"),
+                ("ch10_test.go", "重试/防护/HTTP 测试"),
+                ("README.md", "工程化讲解"),
+            ],
+        },
+        "biz": [
+            ("HTTP 请求 /api/chat", "POST JSON"),
+            ("Guard 检测", "提示注入防御"),
+            ("Retry 重试", "指数退避"),
+            ("ReAct 执行", "工具调用"),
+            ("结构化日志", "trace 记录"),
+            ("评估模式", "-eval 回归测试"),
+        ],
+    },
+    "ch13": {
+        "title": "ch13 模型路由与成本优化",
+        "code": {
+            "flow": [
+                ("main.go", "提问入口"),
+                ("router.go Choose()", "复杂度启发式"),
+                ("Record()", "token 成本记账"),
+                ("RespCache", "10 分钟缓存"),
+                ("chatWithModel()", "按模型调用"),
+            ],
+            "extra": [
+                ("router_test.go", "路由/预算/缓存测试"),
+                ("README.md", "成本优化策略"),
+            ],
+        },
+        "biz": [
+            ("问题", "简单 or 复杂?"),
+            ("选模型", "flash / pro"),
+            ("预算检查", "超半预算降级"),
+            ("缓存?", "相同问题直接返回"),
+            ("回答", "省钱省时"),
+        ],
+    },
+    "ch14": {
+        "title": "ch14 可观测性与日志",
+        "code": {
+            "flow": [
+                ("main.go", "模拟 Agent 任务"),
+                ("trace.go Tracer", "span 树(父子)"),
+                ("Start() / End()", "耗时记录"),
+                ("metrics.go Metrics", "计数 + 直方图"),
+                ("Export()", "JSON 导出"),
+            ],
+            "extra": [
+                ("trace_test.go", "span 树/指标测试"),
+                ("README.md", "可观测性讲解"),
+            ],
+        },
+        "biz": [
+            ("Agent 任务", "llm.think"),
+            ("span 入栈", "tool.calculator"),
+            ("span 出栈", "llm.answer"),
+            ("指标", "计数/平均耗时"),
+            ("导出", "span 树 JSON"),
+        ],
+    },
     "ch15": {
-        "title": "ch15 多 Agent 协作",
+        "title": "ch15 部署与运维",
+        "code": {
+            "flow": [
+                ("main.go", "HTTP 服务"),
+                ("handleReady()", "就绪检查"),
+                ("rateLimiter", "每 IP 限流"),
+                ("signal.NotifyContext", "优雅关闭"),
+                ("Dockerfile", "容器化部署"),
+            ],
+            "extra": [
+                ("main_test.go", "限流/健康测试"),
+                ("README.md", "上线要素讲解"),
+            ],
+        },
+        "biz": [
+            ("请求", "限流检查"),
+            ("/health /ready", "健康检查"),
+            ("业务处理", "Agent 调用"),
+            ("退出信号", "优雅关闭"),
+            ("Docker", "容器部署"),
+        ],
+    },
+    "ch16": {
+        "title": "ch16 Go 实现 MCP 服务器与客户端",
+        "code": {
+            "flow": [
+                ("client/main.go", "启动服务器子进程"),
+                ("MCPClient", "stdio + JSON-RPC 2.0"),
+                ("initialize / tools/list / tools/call", "协议消息"),
+                ("server/main.go", "handle() 按方法分发"),
+                ("callTool()", "echo / add 工具执行"),
+            ],
+            "extra": [("README.md", "协议讲解与运行方式")],
+        },
+        "biz": [
+            ("客户端", "JSON-RPC 请求"),
+            ("stdio 管道", "每行一个 JSON 消息"),
+            ("MCP 服务器", "initialize 握手"),
+            ("tools/list", "列出工具"),
+            ("tools/call", "调用 echo / add"),
+            ("返回结果", "result.content"),
+        ],
+    },
+    "ch17": {
+        "title": "ch17 多 Agent 协作",
         "code": {
             "flow": [
                 ("main.go", "创建三个角色 Agent"),
@@ -594,8 +637,57 @@ CHAPTERS = {
             ("通过", "最终交付"),
         ],
     },
-    "ch16": {
-        "title": "ch16 MCP 进阶(HTTP 传输 + 路由)",
+    "ch18": {
+        "title": "ch18 Agent Web 界面",
+        "code": {
+            "flow": [
+                ("main.go", "HTTP 服务器"),
+                ("handleChat()", "POST /chat JSON"),
+                ("handleStream()", "GET /chat/stream SSE"),
+                ("llm.go StreamChat()", "流式调用"),
+                ("web/index.html", "浏览器聊天界面"),
+            ],
+            "extra": [
+                ("server_test.go", "JSON/SSE 测试"),
+                ("README.md", "Web 界面讲解"),
+            ],
+        },
+        "biz": [
+            ("浏览器", "输入问题"),
+            ("POST /chat", "普通问答"),
+            ("GET /chat/stream", "SSE 流式"),
+            ("LLM 回复", "逐字推送"),
+            ("页面渲染", "打字机效果"),
+        ],
+    },
+    "ch19": {
+        "title": "ch19 RAG 入门(路线B:OpenAI embedding)",
+        "code": {
+            "flow": [
+                ("main.go", "索引 + 问答入口"),
+                ("rag.go", "切块 / Index 构建 / 检索"),
+                ("embedder.go", "OpenAI text-embedding-3-small"),
+                ("vector.go", "余弦相似度"),
+                ("llm.go", "DeepSeek 回答"),
+            ],
+            "extra": [
+                ("docs/sample.txt", "示例公司制度"),
+                ("rag_test.go", "切块/检索/mock 测试"),
+                ("README.md", "RAG 流程讲解"),
+            ],
+        },
+        "biz": [
+            ("文档 docs/*.txt", "私有知识"),
+            ("切块 chunk", "每块 ≤300 字"),
+            ("向量化", "OpenAI embedding"),
+            ("索引 index.json", "片段 + 向量"),
+            ("问题向量化", "余弦检索 top-3"),
+            ("片段注入提示词", "system 资料"),
+            ("DeepSeek 回答", "基于资料"),
+        ],
+    },
+    "ch20": {
+        "title": "ch20 MCP 进阶(HTTP 传输 + 路由)",
         "code": {
             "flow": [
                 ("main.go", "Router 挂载服务器"),
@@ -618,54 +710,8 @@ CHAPTERS = {
             ("结果返回", "原路送回"),
         ],
     },
-    "ch17": {
-        "title": "ch17 Agent Web 界面",
-        "code": {
-            "flow": [
-                ("main.go", "HTTP 服务器"),
-                ("handleChat()", "POST /chat JSON"),
-                ("handleStream()", "GET /chat/stream SSE"),
-                ("llm.go StreamChat()", "流式调用"),
-                ("web/index.html", "浏览器聊天界面"),
-            ],
-            "extra": [
-                ("server_test.go", "JSON/SSE 测试"),
-                ("README.md", "Web 界面讲解"),
-            ],
-        },
-        "biz": [
-            ("浏览器", "输入问题"),
-            ("POST /chat", "普通问答"),
-            ("GET /chat/stream", "SSE 流式"),
-            ("LLM 回复", "逐字推送"),
-            ("页面渲染", "打字机效果"),
-        ],
-    },
-    "ch18": {
-        "title": "ch18 模型路由与成本优化",
-        "code": {
-            "flow": [
-                ("main.go", "提问入口"),
-                ("router.go Choose()", "复杂度启发式"),
-                ("Record()", "token 成本记账"),
-                ("RespCache", "10 分钟缓存"),
-                ("chatWithModel()", "按模型调用"),
-            ],
-            "extra": [
-                ("router_test.go", "路由/预算/缓存测试"),
-                ("README.md", "成本优化策略"),
-            ],
-        },
-        "biz": [
-            ("问题", "简单 or 复杂?"),
-            ("选模型", "flash / pro"),
-            ("预算检查", "超半预算降级"),
-            ("缓存?", "相同问题直接返回"),
-            ("回答", "省钱省时"),
-        ],
-    },
-    "ch19": {
-        "title": "ch19 评估进阶:LLM-as-Judge",
+    "ch21": {
+        "title": "ch21 评估进阶:LLM-as-Judge",
         "code": {
             "flow": [
                 ("main.go", "答题 + 评审两阶段"),
@@ -686,52 +732,6 @@ CHAPTERS = {
             ("评审模型", "输出 score + reason"),
             ("分数校验", "0~10 夹取"),
             ("评估结论", "得分 + 理由"),
-        ],
-    },
-    "ch20": {
-        "title": "ch20 可观测性与日志",
-        "code": {
-            "flow": [
-                ("main.go", "模拟 Agent 任务"),
-                ("trace.go Tracer", "span 树(父子)"),
-                ("Start() / End()", "耗时记录"),
-                ("metrics.go Metrics", "计数 + 直方图"),
-                ("Export()", "JSON 导出"),
-            ],
-            "extra": [
-                ("trace_test.go", "span 树/指标测试"),
-                ("README.md", "可观测性讲解"),
-            ],
-        },
-        "biz": [
-            ("Agent 任务", "llm.think"),
-            ("span 入栈", "tool.calculator"),
-            ("span 出栈", "llm.answer"),
-            ("指标", "计数/平均耗时"),
-            ("导出", "span 树 JSON"),
-        ],
-    },
-    "ch21": {
-        "title": "ch21 部署与运维",
-        "code": {
-            "flow": [
-                ("main.go", "HTTP 服务"),
-                ("handleReady()", "就绪检查"),
-                ("rateLimiter", "每 IP 限流"),
-                ("signal.NotifyContext", "优雅关闭"),
-                ("Dockerfile", "容器化部署"),
-            ],
-            "extra": [
-                ("main_test.go", "限流/健康测试"),
-                ("README.md", "上线要素讲解"),
-            ],
-        },
-        "biz": [
-            ("请求", "限流检查"),
-            ("/health /ready", "健康检查"),
-            ("业务处理", "Agent 调用"),
-            ("退出信号", "优雅关闭"),
-            ("Docker", "容器部署"),
         ],
     },
     "ch22": {

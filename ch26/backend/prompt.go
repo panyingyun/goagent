@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// systemPrompt 来自设计稿 §11.1,以独立文件管理(呼应 ch03 的 SKILL 思想:
+// systemPrompt 来自设计稿 §11.1,以独立文件管理(呼应 ch05 的 SKILL 思想:
 // 提示词是资产,不是代码)。go:embed 让它随二进制打包,运行时不依赖磁盘路径。
 //
 //go:embed prompt.txt

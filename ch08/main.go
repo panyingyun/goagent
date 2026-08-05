@@ -1,118 +1,59 @@
-// 课时8:RAG——让 Agent 拥有私有知识(路线B:OpenAI embedding)
+// 课时8:真实工具——让 Agent 真的"干活"
 //
-// RAG = Retrieval-Augmented Generation(检索增强生成)。
-// 流程:文档切块 -> 向量化 -> 建索引 -> 提问时检索 top-k -> 注入提示词 -> DeepSeek 回答。
+// 给 Agent 装上:联网(http_get)、读写文件(read_file/write_file,限 docs 目录)、
+// 执行命令(run_command,白名单)、本地键值存储(kv_get/kv_set)。
+// 重点讲"工具安全":路径穿越、命令白名单、超时。
 //
-// 运行(需要 DEEPSEEK_API_KEY 和 OPENAI_API_KEY):
+// 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run . "员工生日当天可以休假吗?"
-//	go run .                      # 交互模式
+//	go run . "访问 https://httpbin.org/get 看看返回什么"
+//	go run . "把 hello agent 写到 docs/note.txt"
+//	go run . "执行 go version 看看环境"
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-const indexFile = "index.json"
-
 func main() {
-	ctx := context.Background()
-	emb := NewOpenAIEmbedder()
 	llm := NewLLMClient()
 	if llm.APIKey == "" {
 		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
 		os.Exit(1)
 	}
+	if err := os.MkdirAll(docRoot, 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "创建 docs 目录失败:", err)
+		os.Exit(1)
+	}
+	// 首次运行放一个示例文件,方便演示 read_file
+	note := filepath.Join(docRoot, "notes.txt")
+	if _, err := os.Stat(note); os.IsNotExist(err) {
+		_ = os.WriteFile(note, []byte("这是 Agent 可以读取的示例笔记:项目代号 moon,每周五发周报。"), 0o644)
+	}
 
-	// 1. 建索引:有缓存直接加载,没有就用 OPENAI_API_KEY 向量化 docs/
-	idx, err := LoadIndex(indexFile)
+	reg := NewRegistry()
+	registerDefaultTools(reg)
+
+	input := strings.Join(os.Args[1:], " ")
+	if input == "" {
+		data, _ := io.ReadAll(os.Stdin)
+		input = strings.TrimSpace(string(data))
+	}
+	if input == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"你的指令\"")
+		os.Exit(1)
+	}
+
+	answer, err := runReAct(context.Background(), llm, reg, input)
 	if err != nil {
-		texts, err := loadDocs("docs")
-		if err != nil || len(texts) == 0 {
-			fmt.Fprintln(os.Stderr, "docs 目录下没有 .txt 文档:", err)
-			os.Exit(1)
-		}
-		var chunks []string
-		for _, t := range texts {
-			chunks = append(chunks, chunkText(t, 300)...)
-		}
-		fmt.Fprintf(os.Stderr, "切块完成,共 %d 个片段,开始向量化...\n", len(chunks))
-		idx, err = BuildIndex(ctx, emb, chunks)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "向量化失败:", err)
-			os.Exit(1)
-		}
-		if err := idx.Save(indexFile); err != nil {
-			fmt.Fprintln(os.Stderr, "保存索引失败:", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "索引已保存到 %s\n", indexFile)
-		}
-	} else {
-		fmt.Fprintf(os.Stderr, "已加载索引(%d 个片段)\n", len(idx.Chunks))
+		fmt.Fprintln(os.Stderr, "运行失败:", err)
+		os.Exit(1)
 	}
-
-	// 2. 问答
-	question := strings.Join(os.Args[1:], " ")
-	if question != "" {
-		answer, err := ask(ctx, llm, emb, idx, question)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "失败:", err)
-			os.Exit(1)
-		}
-		fmt.Println(answer)
-		return
-	}
-
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("RAG 问答开始,输入 /exit 退出")
-	for {
-		fmt.Print("问> ")
-		if !scanner.Scan() {
-			break
-		}
-		q := strings.TrimSpace(scanner.Text())
-		if q == "" || q == "/exit" {
-			break
-		}
-		answer, err := ask(ctx, llm, emb, idx, q)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "失败:", err)
-			continue
-		}
-		fmt.Println("\n答>", answer)
-	}
-}
-
-func ask(ctx context.Context, llm *LLMClient, emb Embedder, idx *Index, q string) (string, error) {
-	hits, err := idx.Search(ctx, emb, q, 3)
-	if err != nil {
-		return "", err
-	}
-	fmt.Fprintf(os.Stderr, "检索到 %d 个片段:\n", len(hits))
-	for _, h := range hits {
-		fmt.Fprintf(os.Stderr, "  - %s\n", truncateRune(h, 60))
-	}
-
-	system := "你是公司内部知识助手。只能根据下面资料回答;资料里没有的信息,直接回答\"资料中没有相关信息\"。\n\n=== 资料 ===\n" +
-		strings.Join(hits, "\n---\n")
-	reply, err := llm.Chat(ctx, []Message{
-		{Role: RoleSystem, Content: system},
-		{Role: RoleUser, Content: q},
-	})
-	if err != nil {
-		return "", err
-	}
-	return reply.Content, nil
-}
-
-func truncateRune(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n]) + "..."
+	fmt.Println("\n=== 最终回答 ===")
+	fmt.Println(answer)
 }

@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-// Embedder 文本向量化抽象(与 ch08 相同)。
+// Embedder 文本向量化抽象(与 ch19 相同)。
 type Embedder interface {
 	Embed(ctx context.Context, texts []string) ([][]float64, error)
 }

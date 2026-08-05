@@ -1,59 +1,84 @@
-// 课时9:真实工具——让 Agent 真的"干活"
+// 课时9:向量数据库与高级 RAG
 //
-// 给 Agent 装上:联网(http_get)、读写文件(read_file/write_file,限 docs 目录)、
-// 执行命令(run_command,白名单)、本地键值存储(kv_get/kv_set)。
-// 重点讲"工具安全":路径穿越、命令白名单、超时。
+// 在 ch19 的基础上做三件事:
+// 1. 本地 HashEmbedder(离线可跑,不依赖 OpenAI Key)
+// 2. 混合检索:关键词 + 向量融合
+// 3. 重排:去重,保证结果多样性
 //
-// 运行(已配置 DEEPSEEK_API_KEY):
+// 运行:
 //
-//	go run . "访问 https://httpbin.org/get 看看返回什么"
-//	go run . "把 hello agent 写到 docs/note.txt"
-//	go run . "执行 go version 看看环境"
+//	go run . "员工生日当天可以休假吗?"
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
 func main() {
-	llm := NewLLMClient()
-	if llm.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
+	emb := HashEmbedder{}
+	ctx := context.Background()
+
+	texts, err := loadDocs("docs")
+	if err != nil || len(texts) == 0 {
+		fmt.Fprintln(os.Stderr, "docs 目录下没有 .txt 文档")
 		os.Exit(1)
 	}
-	if err := os.MkdirAll(docRoot, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "创建 docs 目录失败:", err)
-		os.Exit(1)
+	var chunks []string
+	for _, t := range texts {
+		chunks = append(chunks, chunkText(t, 300)...)
 	}
-	// 首次运行放一个示例文件,方便演示 read_file
-	note := filepath.Join(docRoot, "notes.txt")
-	if _, err := os.Stat(note); os.IsNotExist(err) {
-		_ = os.WriteFile(note, []byte("这是 Agent 可以读取的示例笔记:项目代号 moon,每周五发周报。"), 0o644)
-	}
-
-	reg := NewRegistry()
-	registerDefaultTools(reg)
-
-	input := strings.Join(os.Args[1:], " ")
-	if input == "" {
-		data, _ := io.ReadAll(os.Stdin)
-		input = strings.TrimSpace(string(data))
-	}
-	if input == "" {
-		fmt.Fprintln(os.Stderr, "用法: go run . \"你的指令\"")
-		os.Exit(1)
-	}
-
-	answer, err := runReAct(context.Background(), llm, reg, input)
+	vecs, err := emb.Embed(ctx, chunks)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "运行失败:", err)
+		fmt.Fprintln(os.Stderr, "向量化失败:", err)
 		os.Exit(1)
 	}
-	fmt.Println("\n=== 最终回答 ===")
-	fmt.Println(answer)
+	hr := NewHybridRetriever(chunks, vecs)
+	fmt.Fprintf(os.Stderr, "索引完成: %d 个片段\n", len(chunks))
+
+	question := strings.Join(os.Args[1:], " ")
+	if question == "" {
+		scanner := bufio.NewScanner(os.Stdin)
+		fmt.Print("问> ")
+		if scanner.Scan() {
+			question = strings.TrimSpace(scanner.Text())
+		}
+	}
+	if question == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"问题\"")
+		os.Exit(1)
+	}
+
+	hits := Rerank(hr.Search(question, 5), 3)
+	fmt.Fprintf(os.Stderr, "检索到 %d 个片段(混合检索+重排):\n", len(hits))
+	for _, h := range hits {
+		fmt.Fprintf(os.Stderr, "  [%.2f] %s\n", h.Score, truncateRune(h.Text, 50))
+	}
+
+	system := "你是公司知识助手,只能根据下面资料回答。\n\n=== 资料 ===\n" + joinHits(hits)
+	reply, err := chatLLM(ctx, system, question)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "失败:", err)
+		os.Exit(1)
+	}
+	fmt.Println(reply)
+}
+
+func joinHits(hits []Hit) string {
+	parts := make([]string, len(hits))
+	for i, h := range hits {
+		parts[i] = h.Text
+	}
+	return strings.Join(parts, "\n---\n")
+}
+
+func truncateRune(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "..."
 }

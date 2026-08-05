@@ -1,14 +1,14 @@
-# 课时20:可观测性与日志
+# 课时20:MCP 进阶
 
-> 目标:给 Agent 装上"黑匣子"——每次 LLM 调用、工具调用都有记录和指标。
+> 目标:把 ch16 的最小 MCP 升级成"真实生态"的形态——HTTP 传输 + 多服务器路由。
 
 ## 本课时学什么
 
-1. **Span 树**:Start/End 自动形成父子关系,看到"这次任务里 LLM 花了多久、
-   工具花了多久";
-2. **指标**:计数器(任务次数) + 直方图(平均耗时);
-3. 和 LangSmith 的关系:本课的 `Tracer` 就是 LangSmith run 的最小实现,
-   课时 24 会把它升级成可导出的完整追踪。
+1. **HTTP 传输**:JSON-RPC 走 `POST /mcp`,客户端不再依赖本地子进程;
+2. **多服务器路由**:Router 把多个 MCP 服务器合成一个命名空间,
+   工具名统一为 `服务器名.工具名`(如 `weather.get_weather`);
+3. **传输无关抽象**:`ToolProvider` 接口让 stdio / HTTP / 内存服务器
+   对上层完全透明。
 
 ## 运行
 
@@ -17,10 +17,23 @@ cd E:\codex\project001\goagent\ch20
 go run .
 ```
 
-输出两段:span 树 JSON + 指标快照。
+离线测试:
+
+```powershell
+go test ./... -v
+```
+
+## 和 ch16 的对比
+
+| | ch16 | ch20 |
+|---|---|---|
+| 传输 | stdio | stdio + HTTP |
+| 服务器数量 | 1 个 | 多个,路由合成 |
+| 客户端 | 直连 | Router 统一入口 |
 
 ## 练习
 
-1. 给 span 加 `token_used` 属性,统计每次 LLM 调用的成本;
-2. 把 `Export` 改成写文件,模拟日志落盘;
-3. 想一想:为什么生产日志要"结构化 JSON"而不是一行行文本?
+1. 给 `callServerTool` 加一个 `multiply` 工具,用 HTTP 客户端调用;
+2. 把 `HTTPMCPHandler` 挂到真正的 `http.ListenAndServe` 上,
+   用 curl 手动发一个 JSON-RPC 请求;
+3. 想一想:生产环境为什么需要"路由 + 鉴权"(提示:多个团队各自维护服务器)。

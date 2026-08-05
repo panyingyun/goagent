@@ -1,84 +1,119 @@
-// 课时12:向量数据库与高级 RAG
+// 课时12:评估、安全与工程化
 //
-// 在 ch08 的基础上做三件事:
-// 1. 本地 HashEmbedder(离线可跑,不依赖 OpenAI Key)
-// 2. 混合检索:关键词 + 向量融合
-// 3. 重排:去重,保证结果多样性
+// 三个能力:
+// 1. 评估:go run . -eval 用 eval/cases.json 回归测试 Agent;
+// 2. 安全:Guard 检测提示注入并注入防御指令;
+// 3. 工程化:把 Agent 发布成 HTTP 服务 + 结构化日志 + 自动重试。
 //
-// 运行:
+// 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run . "员工生日当天可以休假吗?"
+//	go run . -eval                     # 跑离线评估
+//	go run .                           # 启动 HTTP 服务
+//	Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"12 * 8 + 4 等于多少?"}'
 package main
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
-	emb := HashEmbedder{}
-	ctx := context.Background()
+	evalMode := flag.Bool("eval", false, "运行离线评估(eval/cases.json)")
+	port := flag.String("port", "8080", "HTTP 服务端口")
+	flag.Parse()
 
-	texts, err := loadDocs("docs")
-	if err != nil || len(texts) == 0 {
-		fmt.Fprintln(os.Stderr, "docs 目录下没有 .txt 文档")
+	llm := NewLLMClient()
+	if llm.APIKey == "" {
+		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
 		os.Exit(1)
 	}
-	var chunks []string
-	for _, t := range texts {
-		chunks = append(chunks, chunkText(t, 300)...)
-	}
-	vecs, err := emb.Embed(ctx, chunks)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "向量化失败:", err)
-		os.Exit(1)
-	}
-	hr := NewHybridRetriever(chunks, vecs)
-	fmt.Fprintf(os.Stderr, "索引完成: %d 个片段\n", len(chunks))
+	reg := NewRegistry()
+	registerDefaultTools(reg)
+	logger := NewLogger(os.Stderr)
 
-	question := strings.Join(os.Args[1:], " ")
-	if question == "" {
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Print("问> ")
-		if scanner.Scan() {
-			question = strings.TrimSpace(scanner.Text())
+	if *evalMode {
+		cases, err := loadCases("eval/cases.json")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "加载用例失败:", err)
+			os.Exit(1)
 		}
+		passed, total := RunEval(context.Background(), llm, reg, cases, logger)
+		fmt.Printf("评估结果: %d/%d 通过\n", passed, total)
+		if passed < total {
+			os.Exit(1)
+		}
+		return
 	}
-	if question == "" {
-		fmt.Fprintln(os.Stderr, "用法: go run . \"问题\"")
+
+	s := &server{llm: llm, reg: reg, logger: logger}
+	http.HandleFunc("/health", s.handleHealth)
+	http.HandleFunc("/chat", s.handleChat)
+	fmt.Printf("Agent HTTP 服务已启动: http://localhost:%s\n", *port)
+	if err := http.ListenAndServe(":"+*port, nil); err != nil {
+		fmt.Fprintln(os.Stderr, "服务启动失败:", err)
 		os.Exit(1)
 	}
+}
 
-	hits := Rerank(hr.Search(question, 5), 3)
-	fmt.Fprintf(os.Stderr, "检索到 %d 个片段(混合检索+重排):\n", len(hits))
-	for _, h := range hits {
-		fmt.Fprintf(os.Stderr, "  [%.2f] %s\n", h.Score, truncateRune(h.Text, 50))
+type server struct {
+	llm    ChatLLM
+	reg    *Registry
+	logger *Logger
+}
+
+type chatReq struct {
+	Question string `json:"question"`
+}
+
+type chatResp struct {
+	Answer string `json:"answer"`
+	Guard  bool   `json:"guard,omitempty"`
+}
+
+func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"status": "ok"})
+}
+
+func (s *server) handleChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
+	var req chatReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Question) == "" {
+		http.Error(w, "question 必填", http.StatusBadRequest)
+		return
+	}
+	start := time.Now()
+	guardMsg := Guard(req.Question)
 
-	system := "你是公司知识助手,只能根据下面资料回答。\n\n=== 资料 ===\n" + joinHits(hits)
-	reply, err := chatLLM(ctx, system, question)
+	// 网络类错误自动重试 3 次(指数退避)
+	var answer string
+	err := Retry(r.Context(), 3, 500*time.Millisecond, func() error {
+		a, err := runReAct(r.Context(), s.llm, s.reg, req.Question, guardMsg)
+		if err != nil {
+			return &RetryableError{Err: err}
+		}
+		answer = a
+		return nil
+	})
+	s.logger.Log("info", "chat", map[string]any{
+		"question": truncateStr(req.Question, 80),
+		"guard":    guardMsg != "",
+		"duration": time.Since(start).String(),
+	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "失败:", err)
-		os.Exit(1)
+		s.logger.Log("error", "chat_failed", map[string]any{"err": err.Error()})
+		http.Error(w, "agent 执行失败: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	fmt.Println(reply)
-}
-
-func joinHits(hits []Hit) string {
-	parts := make([]string, len(hits))
-	for i, h := range hits {
-		parts[i] = h.Text
-	}
-	return strings.Join(parts, "\n---\n")
-}
-
-func truncateRune(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n]) + "..."
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(chatResp{Answer: answer, Guard: guardMsg != ""})
 }

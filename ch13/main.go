@@ -1,88 +1,106 @@
-// 课时13:工具进阶与并行调用
+// 课时13:模型路由与成本优化
 //
-// 三个升级:
-// 1. 参数校验:必填字段缺失直接报错,不执行
-// 2. 结果缓存:同样的调用 60 秒内直接返回缓存
-// 3. 并行执行:一次多个 tool_calls,并发执行、按序回填
+// 演示:不同任务选不同模型(flash/pro),带预算控制;相同问题命中缓存,不再花钱。
 //
 // 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run . "帮我同时查几个问题:1+1=? 2+2=? 3+3=?"
+//	go run . "1+1 等于多少?"
+//	go run . "帮我分析一下 Go 和 Rust 的优缺点"
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
 func main() {
-	llm := NewLLMClient()
-	if llm.APIKey == "" {
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY")
 		os.Exit(1)
 	}
-	reg := NewRegistry()
-	registerDemoTools(reg)
-	ex := NewExecutor(reg)
-
-	input := strings.Join(os.Args[1:], " ")
-	if input == "" {
+	question := strings.Join(os.Args[1:], " ")
+	if question == "" {
 		data, _ := io.ReadAll(os.Stdin)
-		input = strings.TrimSpace(string(data))
+		question = strings.TrimSpace(string(data))
 	}
-	if input == "" {
-		fmt.Fprintln(os.Stderr, "用法: go run . \"你的问题\"")
+	if question == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"问题\"")
 		os.Exit(1)
 	}
-	answer, err := runToolCallParallel(context.Background(), llm, ex, input)
+
+	router := NewRouter()
+	// 第一次提问
+	askAndPrint(router, apiKey, question)
+	// 第二次相同问题 -> 缓存命中
+	askAndPrint(router, apiKey, question)
+
+	fmt.Printf("\n本次会话花费估算: $%.4f\n", router.Spent())
+}
+
+func askAndPrint(router *Router, apiKey, question string) {
+	if ans, ok := router.cache.Get(question); ok {
+		fmt.Println(">>> 缓存命中,不再调用模型")
+		fmt.Println(ans)
+		return
+	}
+	model := router.Choose(question)
+	fmt.Printf(">>> 选择模型: %s(复杂度: %s)\n", model.Name, model.Capability)
+	answer, err := chatWithModel(apiKey, model.Name, question)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "失败:", err)
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, "调用失败:", err)
+		return
 	}
-	fmt.Println("\n=== 最终回答 ===")
+	// 粗略 token 估算:中文 1 字约 1 token
+	router.Record(model, len([]rune(question)), len([]rune(answer)))
+	router.cache.Set(question, answer)
 	fmt.Println(answer)
 }
 
-// registerDemoTools 注册几个"慢工具",方便观察并行效果。
-func registerDemoTools(r *Registry) {
-	mk := func(name, desc string, fn func(a, b float64) float64) {
-		r.Register(Tool{
-			Name:        name,
-			Description: desc,
-			Required:    []string{"a", "b"},
-			Run: func(ctx context.Context, args map[string]any) (string, error) {
-				select {
-				case <-ctx.Done():
-					return "", ctx.Err()
-				case <-time.After(300 * time.Millisecond): // 模拟耗时工具
-				}
-				a, ok1 := toFloat(args["a"])
-				b, ok2 := toFloat(args["b"])
-				if !ok1 || !ok2 {
-					return "", fmt.Errorf("参数 a、b 必须是数字")
-				}
-				return fmt.Sprintf("%v", fn(a, b)), nil
-			},
-		})
+func chatWithModel(apiKey, model, question string) (string, error) {
+	body, _ := json.Marshal(map[string]any{
+		"model": model,
+		"messages": []any{
+			map[string]any{"role": "system", "content": "回答简洁。"},
+			map[string]any{"role": "user", "content": question},
+		},
+		"stream": false,
+	})
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
+		"https://api.deepseek.com/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
 	}
-	mk("add", "两个数相加", func(a, b float64) float64 { return a + b })
-	mk("mul", "两个数相乘", func(a, b float64) float64 { return a * b })
-	mk("sub", "两个数相减", func(a, b float64) float64 { return a - b })
-}
-
-func toFloat(v any) (float64, bool) {
-	switch n := v.(type) {
-	case float64:
-		return n, true
-	case string:
-		var f float64
-		if _, err := fmt.Sscanf(n, "%g", &f); err == nil {
-			return f, true
-		}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	resp, err := (&http.Client{Timeout: 120 * time.Second}).Do(req)
+	if err != nil {
+		return "", err
 	}
-	return 0, false
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API 返回 %d: %s", resp.StatusCode, string(data))
+	}
+	var out struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return "", err
+	}
+	if len(out.Choices) == 0 {
+		return "", fmt.Errorf("没有 choices")
+	}
+	return out.Choices[0].Message.Content, nil
 }

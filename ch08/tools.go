@@ -20,7 +20,7 @@ import (
 	_ "time/tzdata"
 )
 
-// Tool 与课时4 相同:Agent 可调用的能力,注册进 Registry。
+// Tool 与课时3 相同:Agent 可调用的能力,注册进 Registry。
 type Tool struct {
 	Name        string
 	Description string
@@ -289,7 +289,7 @@ func (k *KVStore) set(key, value string) error {
 	return os.WriteFile(k.path, b, 0o644)
 }
 
-// ---- 极简表达式求值器(来自课时4) ----
+// ---- 极简表达式求值器(来自课时3) ----
 
 type calcParser struct {
 	s   string

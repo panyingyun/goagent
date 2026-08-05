@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// 与课时1 相同的 DeepSeek 客户端:"想"由 DeepSeek 负责。
+// 与课时3 相同的 DeepSeek 客户端。
 const defaultBaseURL = "https://api.deepseek.com"
 
 type Role string

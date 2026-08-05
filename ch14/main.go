@@ -1,64 +1,54 @@
-// 课时14:Agent 工作流与任务规划
+// 课时14:可观测性与日志
 //
-// 把"单循环"升级成"多步骤工作流":
-// 规划(拆解) -> 执行(逐步骤) -> 检查点(断点续跑)
+// 给 Agent 加"黑匣子":调用链追踪(span 树) + 指标(计数/耗时)。
+// 本课用模拟 Agent 演示,把真实 LLM 调用包在 span 里即可。
 //
-// 运行(已配置 DEEPSEEK_API_KEY):
+// 运行:
 //
-//	go run . -plan "帮我准备一次新员工入职介绍"
-//	go run . -run      # 执行 checkpoint.json 里的工作流
-//	go run . -resume   # 从断点继续(模拟中断后恢复)
+//	go run .
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
-const checkpointFile = "checkpoint.json"
-
 func main() {
-	plan := flag.String("plan", "", "输入目标,生成工作流")
-	run := flag.Bool("run", false, "执行 checkpoint.json 中的工作流")
-	resume := flag.Bool("resume", false, "从断点继续执行")
-	flag.Parse()
+	tracer := NewTracer()
+	metrics := NewMetrics()
 
-	llm := NewLLMClient()
-	if llm.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY")
-		os.Exit(1)
+	// 模拟一次 Agent 任务:llm 思考 -> 调用工具 -> 再次 llm 回答
+	root := tracer.Start("agent.task")
+	metrics.Inc("task_started")
+	start := time.Now()
+
+	llmSpan := tracer.Start("llm.think")
+	time.Sleep(20 * time.Millisecond)
+	tracer.End(llmSpan)
+	metrics.Observe("llm_duration_ms", float64(llmSpan.End.Sub(llmSpan.Start).Milliseconds()))
+
+	toolSpan := tracer.Start("tool.calculator")
+	time.Sleep(10 * time.Millisecond)
+	toolSpan.Attrs["expression"] = "12 * 8 + 4"
+	tracer.End(toolSpan)
+	metrics.Observe("tool_duration_ms", float64(toolSpan.End.Sub(toolSpan.Start).Milliseconds()))
+
+	llmSpan2 := tracer.Start("llm.answer")
+	time.Sleep(15 * time.Millisecond)
+	tracer.End(llmSpan2)
+	metrics.Observe("llm_duration_ms", float64(llmSpan2.End.Sub(llmSpan2.Start).Milliseconds()))
+
+	tracer.End(root)
+	metrics.Inc("task_finished")
+	metrics.Observe("task_duration_ms", float64(time.Since(start).Milliseconds()))
+
+	fmt.Println("=== 调用链追踪(span 树) ===")
+	if err := tracer.Export(os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
-	ctx := context.Background()
-
-	switch {
-	case *plan != "":
-		w := &Workflow{ID: "wf-1", Goal: *plan, Checkpoint: checkpointFile}
-		if err := w.Plan(ctx, llm); err != nil {
-			fmt.Fprintln(os.Stderr, "规划失败:", err)
-			os.Exit(1)
-		}
-		fmt.Printf("规划完成,共 %d 步,已保存到 %s\n", len(w.Steps), checkpointFile)
-		for _, s := range w.Steps {
-			fmt.Printf("  %d. %s\n", s.ID+1, s.Desc)
-		}
-	case *run || *resume:
-		w, err := LoadWorkflow(checkpointFile)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "加载工作流失败:", err)
-			os.Exit(1)
-		}
-		if err := w.Resume(ctx, llm); err != nil {
-			fmt.Fprintln(os.Stderr, "执行中断:", err)
-			os.Exit(1)
-		}
-		fmt.Println("\n=== 全部步骤完成 ===")
-		for _, s := range w.Steps {
-			fmt.Printf("%d. %s\n   -> %s\n", s.ID+1, s.Desc, s.Output)
-		}
-	default:
-		fmt.Fprintln(os.Stderr, "用法: go run . -plan \"目标\" / -run / -resume")
-		os.Exit(1)
+	fmt.Println("\n=== 指标快照 ===")
+	for k, v := range metrics.Snapshot() {
+		fmt.Printf("%s = %v\n", k, v)
 	}
 }

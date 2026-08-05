@@ -1,108 +1,56 @@
-# 课时5:综合案例——完整 AI Agent
+# 课时5:Go 实现 SKILL 调用
 
-> 目标:把前四课的知识(LLM、SKILL、ReAct、MCP)组装成一个完整 Agent,
-> 并额外体验原生 Function Calling。
+> 目标:理解 SKILL 的本质——把"行为说明书"打包成文件,注入系统提示词。
 
 ## 本课时学什么
 
-- **组装**:LLM 负责"想",Tool 负责"做",Agent 用循环把两者接起来;
-- **两种工具调用方式**:
-  - `react`(默认):课时 4 的文本协议循环;
-  - `tool`:原生 Function Calling,模型返回结构化 `tool_calls`,更稳;
-- **SKILL**:课时 3 的技能文件自动注入系统提示词;
-- **MCP**:课时 2 的服务器通过 stdio 接入,变成 Agent 的一个工具;
-- 一张图看懂最终架构:
-
-```mermaid
-flowchart LR
-    subgraph Agent
-        L[LLM DeepSeek] --> R[工具注册表 Registry]
-        R --> T1[calculator]
-        R --> T2[get_time]
-        R --> M[MCP 客户端]
-        S2[SKILL 技能文件] --> L
-    end
-    M -- stdio JSON-RPC --> S[MCP 服务器子进程]
-```
+- SKILL(技能)是 Codex / Claude 里的概念:一段给 LLM 的指令 + 参考资料 + 可能的脚本/模板,
+  按约定格式放在目录里,需要时加载;
+- 它**不是给 Go 程序用的库**,而是给 LLM 的"提示词包"——所以实现上很简单:
+  读文件 → 拼进 system 消息 → 模型遵守;
+- 好处:行为规范可以版本化管理、复用、按场景组合,不用改一行程序代码。
 
 ## 目录结构
 
 ```text
 ch05/
-├── main.go            # 入口:模式选择(react/tool)、MCP 接入、SKILL 加载
-├── llm.go             # LLM 客户端(课时1)
-├── agent.go           # ReAct 循环 + Function Calling 循环
-├── tools.go           # 工具注册表 + calculator / get_time
-├── skills.go          # SKILL 加载(课时3)
-├── mcpclient.go       # MCP 客户端(课时2)
-├── mcp/server/main.go # MCP 服务器(课时2)
-├── skills/            # 技能文件
-└── react_test.go      # 离线测试(mock LLM + MCP)
+├── main.go                # 加载 skills/*.md -> 拼进 system -> 问 DeepSeek
+├── skills/
+│   ├── math-tutor.md      # 技能1:数学题必须按"公式/代入/结果"三步回答
+│   └── translator.md      # 技能2:翻译必须按"原文/译文"格式输出
+└── README.md
 ```
 
 ## 运行
 
 ```powershell
 cd E:\codex\project001\ch05
-
-# 文本 ReAct 模式(课时4 的方式)
 go run . "12 * 8 + 4 等于多少?"
-
-# 原生 Function Calling 模式
-go run . -mode tool "2 + 3 * 4 等于多少?"
-
-# 接入 MCP(先编译课时2的服务器)
-New-Item -ItemType Directory -Force bin
-go build -o bin\mcp-server.exe .\mcp\server
-go run . -mcp-server bin\mcp-server.exe "用 mcp 工具调用 echo,内容写 hello"
+go run . "把 Hello world 翻译成中文"
 ```
 
-离线验证(不需要 API Key):
+注意观察:同一个模型,加载技能后,回答格式会严格按技能要求走——
+这就是"提示词即技能"的效果。
 
-```powershell
-go test ./... -v
+## 技能文件长什么样
+
+```markdown
+# math-tutor
+
+当用户提出数学问题时,必须严格按以下三步回答…
 ```
 
-## 两种模式对比
+约定:第一行 `# 技能名` 是名字,其余全部是给 LLM 的指令。
 
-ReAct(文本):
+## 练习
 
-- 不依赖 API 特性,任何对话模型都能跑;
-- 格式靠约定,解析靠正则,模型偶尔会"跑偏",需要兜底提示。
+1. 新建 `skills/poet.md`,让模型用七言绝句回答任何问题,验证生效;
+2. 删掉一个技能文件,对比回答变化,体会"技能 = 行为开关";
+3. 想一想:如果技能很多(几十个),全部塞进 system 会有什么问题?
+   (提示:上下文长度和注意力——这也是真实框架要做技能选择的原因。)
 
-Function Calling(原生):
+## 小结
 
-- 工具定义(名字、说明、参数 Schema)直接发给模型;
-- 模型返回结构化 `tool_calls`,参数是干净 JSON;
-- 稳定、生产常用,要求模型支持 `tools` 参数(DeepSeek v4 两个模型都支持)。
-
-## SKILL 与 MCP 在 Agent 里的位置
-
-- SKILL 改的是**提示词**:`skills/*.md` 被拼进 system 消息,约束模型行为;
-- MCP 接的是**工具**:`mcp` 是一个普通工具,转发到 MCP 服务器,
-  服务器上的工具(echo 等)对 Agent 来说就像本地工具一样;
-- 所以整套架构可以一句话概括:**LLM 负责想,Tool 负责做,
-  SKILL 负责告诉模型怎么做,MCP 让工具即插即用。**
-
-## 练习(综合题)
-
-1. 给 MCP 服务器加一个 `multiply` 工具,再给 Agent 注册一个本地工具
-   `random`,分别用 react 和 tool 两种模式问它;
-2. 新增一个 `skills/poet.md`,观察它对计算问题的回答格式是否也受影响;
-3. 把默认模型改成 `deepseek-v4-pro`,对比复杂多步任务的表现和速度;
-4. 说出 Agent 在什么情况下会"陷入死循环",框架可以用哪些手段防止?
-   (提示:maxIterations、Observation 里的错误信息、格式兜底。)
-
-## 课程总结
-
-回顾五课:
-
-| 课时 | 内容 | 一句话 |
-|---|---|---|
-| 1 | LLM | 模型只会"说",API 是通道 |
-| 2 | MCP | 工具的"USB-C",协议层 |
-| 3 | SKILL | 行为规范打包成提示词文件 |
-| 4 | ReAct | 思考-行动-观察的循环 |
-| 5 | Agent | 把以上全部组装成会动手的助手 |
-
-现在你可以回去修改任意一课,观察综合 Agent 的行为变化——这就是"组件化"的好处。
+SKILL 的实现是"提示词管理",但它的价值在工程层面:把模型的行为规范
+当成可维护的文件资产。课时4 的完整 Agent 已经演示如何加载 SKILL;
+本课单独拆开,让你看清"提示词包"本身,再回去改 `skills/*.md` 观察 Agent 行为变化。

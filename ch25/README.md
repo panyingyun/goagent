@@ -30,9 +30,9 @@ LangServe 是 Python(FastAPI)专属,我们的 Go 版实现了同样的接口契�
 
 ## 练习
 
-1. 给 `/invoke` 加 `config` 参数(选模型 flash/pro,参考 ch18);
+1. 给 `/invoke` 加 `config` 参数(选模型 flash/pro,参考 ch13);
 2. 加一个 `/chain` 接口,把 ch22 的 SequentialChain 部署上去;
-3. 用 Docker 打包(ch21 的 Dockerfile 改改就能用)。
+3. 用 Docker 打包(ch15 的 Dockerfile 改改就能用)。
 
 ## 课程结束语
 

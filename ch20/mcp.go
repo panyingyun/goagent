@@ -87,7 +87,7 @@ func handleRPC(req rpcRequest) *rpcResponse {
 		return mkResult(req.ID, map[string]any{
 			"protocolVersion": "2025-06-18",
 			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
-			"serverInfo":      map[string]any{"name": "ch16-server", "version": "0.1.0"},
+			"serverInfo":      map[string]any{"name": "ch20-server", "version": "0.1.0"},
 		})
 	case "tools/list":
 		return mkResult(req.ID, map[string]any{"tools": []any{

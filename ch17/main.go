@@ -1,27 +1,20 @@
-// 课时17:Agent Web 界面
+// 课时17:多 Agent 协作
 //
-// 给 Agent 套一个浏览器聊天界面:
-// GET /            -> 网页
-// POST /chat       -> JSON 问答
-// GET /chat/stream -> SSE 流式问答
+// 用三个角色协作完成任务:
+// 规划者(拆解任务) -> 执行者(执行) -> 审查者(质检),不合格就返工。
 //
 // 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run .
-//
-// 然后浏览器打开 http://localhost:8080
+//	go run . "写一段产品介绍,重点突出 AI 能力"
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
+	"io"
 	"os"
+	"strings"
 )
-
-type server struct {
-	llm ChatLLM
-}
 
 func main() {
 	llm := NewLLMClient()
@@ -29,69 +22,27 @@ func main() {
 		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY")
 		os.Exit(1)
 	}
-	s := &server{llm: llm}
-	http.HandleFunc("/", s.handleIndex)
-	http.HandleFunc("/chat", s.handleChat)
-	http.HandleFunc("/chat/stream", s.handleStream)
-	fmt.Println("打开 http://localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	task := strings.Join(os.Args[1:], " ")
+	if task == "" {
+		data, _ := io.ReadAll(os.Stdin)
+		task = strings.TrimSpace(string(data))
+	}
+	if task == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"任务描述\"")
 		os.Exit(1)
 	}
-}
 
-func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "web/index.html")
-}
-
-func (s *server) handleChat(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
-		return
+	orch := &Orchestra{
+		Planner:   &Agent{Name: "planner", Role: "你是规划者:把任务拆成清晰的执行计划,输出 2~3 步。", LLM: llm},
+		Executor:  &Agent{Name: "executor", Role: "你是执行者:严格按照计划产出最终内容,不要解释过程。", LLM: llm},
+		Reviewer:  &Agent{Name: "reviewer", Role: "你是审查者:检查内容质量,发现问题就说改进建议,合格就回复\"通过\"。", LLM: llm},
+		MaxRounds: 3,
 	}
-	var req struct {
-		Question string `json:"question"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Question == "" {
-		http.Error(w, "question 必填", http.StatusBadRequest)
-		return
-	}
-	reply, err := s.llm.Chat(r.Context(), []Message{
-		{Role: "system", Content: "你是乐于助人的中文助手。"},
-		{Role: "user", Content: req.Question},
-	})
+	result, err := orch.Run(context.Background(), task)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		fmt.Fprintln(os.Stderr, "失败:", err)
+		os.Exit(1)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"answer": reply.Content})
-}
-
-// handleStream 用 SSE 逐字推送回复。
-func (s *server) handleStream(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("q")
-	if q == "" {
-		http.Error(w, "缺少参数 q", http.StatusBadRequest)
-		return
-	}
-	fl, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "不支持流式", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.WriteHeader(http.StatusOK)
-	fl.Flush()
-	err := s.llm.StreamChat(r.Context(), []Message{
-		{Role: "system", Content: "你是乐于助人的中文助手。"},
-		{Role: "user", Content: q},
-	}, func(delta string) {
-		fmt.Fprintf(w, "data: %s\n\n", delta)
-		fl.Flush()
-	})
-	if err != nil {
-		fmt.Fprintf(w, "data: [ERROR] %v\n\n", err)
-	}
+	fmt.Println("\n=== 最终交付 ===")
+	fmt.Println(result)
 }

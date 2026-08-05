@@ -1,31 +1,40 @@
-# 课时15:多 Agent 协作
+# 课时15:部署与运维
 
-> 目标:让多个"角色 Agent"像团队一样协作——规划、执行、审查,不合格就返工。
+> 目标:让 Agent 服务具备上线的基本素质——健康检查、限流、优雅关闭、密钥安全。
 
 ## 本课时学什么
 
-1. **Agent 角色化**:同一个 LLM,用不同系统提示词变成规划者/执行者/审查者;
-2. **编排循环**:规划 → 执行 → 审查,审查不通过就返工,最多 N 轮;
-3. **消息传递**:每个 Agent 独立记忆自己的输入输出。
+1. **健康检查**:`/health`(存活)+ `/ready`(就绪,检查依赖是否配好);
+2. **限流**:每 IP 每秒最多 N 次,防止被打爆;
+3. **优雅关闭**:收到 Ctrl+C / SIGTERM 后,等当前请求处理完再退出;
+4. **密钥管理**:只从环境变量读,不进代码、不进 git。
 
 ## 运行
 
 ```powershell
 cd E:\codex\project001\goagent\ch15
-go run . "写一段产品介绍,重点突出 AI 能力"
+go run .
 ```
 
-观察 stderr:三个角色的输出依次出现,审查不通过时会看到返工轮次。
+另一个终端:
 
-## 关键认知
+```powershell
+Invoke-RestMethod -Uri http://localhost:8080/health
+Invoke-RestMethod -Uri http://localhost:8080/ready
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"你好"}'
+```
 
-- 多 Agent 不是"更聪明的模型",而是"分工 + 校验":审查者专门挑毛病;
-- 每次协作都是一次独立的 LLM 调用,成本 = 轮次 × 调用次数;
-- 真实项目里,规划/执行/审查可以复用同一个模型,也可以混用
-  flash(执行)和 pro(审查)来平衡成本——这就是课时 18 的话题。
+连续快速点 `/chat`,第 6 次会看到 429 限流。Ctrl+C 观察优雅关闭日志。
+
+## Docker 部署
+
+```powershell
+docker build -t goagent .
+docker run -p 8080:8080 -e DEEPSEEK_API_KEY=你的Key goagent
+```
 
 ## 练习
 
-1. 加一个"测试者"角色,专门给执行结果找 bug;
-2. 把 `MaxRounds` 改成 1,观察质量问题;
-3. 让审查者的输出也进入执行者的上下文,做"带反馈的迭代"。
+1. 把限流窗口改成 10 秒,观察行为;
+2. 加一个 `/metrics` 接口,输出课时14 的指标;
+3. 想想生产还要补什么?(提示:日志聚合、监控告警、HTTPS、密钥轮换。)

@@ -1,119 +1,88 @@
-// 课时10:评估、安全与工程化
+// 课时10:工具进阶与并行调用
 //
-// 三个能力:
-// 1. 评估:go run . -eval 用 eval/cases.json 回归测试 Agent;
-// 2. 安全:Guard 检测提示注入并注入防御指令;
-// 3. 工程化:把 Agent 发布成 HTTP 服务 + 结构化日志 + 自动重试。
+// 三个升级:
+// 1. 参数校验:必填字段缺失直接报错,不执行
+// 2. 结果缓存:同样的调用 60 秒内直接返回缓存
+// 3. 并行执行:一次多个 tool_calls,并发执行、按序回填
 //
 // 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run . -eval                     # 跑离线评估
-//	go run .                           # 启动 HTTP 服务
-//	Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"12 * 8 + 4 等于多少?"}'
+//	go run . "帮我同时查几个问题:1+1=? 2+2=? 3+3=?"
 package main
 
 import (
 	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
-	"net/http"
+	"io"
 	"os"
 	"strings"
 	"time"
 )
 
 func main() {
-	evalMode := flag.Bool("eval", false, "运行离线评估(eval/cases.json)")
-	port := flag.String("port", "8080", "HTTP 服务端口")
-	flag.Parse()
-
 	llm := NewLLMClient()
 	if llm.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
+		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY")
 		os.Exit(1)
 	}
 	reg := NewRegistry()
-	registerDefaultTools(reg)
-	logger := NewLogger(os.Stderr)
+	registerDemoTools(reg)
+	ex := NewExecutor(reg)
 
-	if *evalMode {
-		cases, err := loadCases("eval/cases.json")
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "加载用例失败:", err)
-			os.Exit(1)
-		}
-		passed, total := RunEval(context.Background(), llm, reg, cases, logger)
-		fmt.Printf("评估结果: %d/%d 通过\n", passed, total)
-		if passed < total {
-			os.Exit(1)
-		}
-		return
+	input := strings.Join(os.Args[1:], " ")
+	if input == "" {
+		data, _ := io.ReadAll(os.Stdin)
+		input = strings.TrimSpace(string(data))
 	}
-
-	s := &server{llm: llm, reg: reg, logger: logger}
-	http.HandleFunc("/health", s.handleHealth)
-	http.HandleFunc("/chat", s.handleChat)
-	fmt.Printf("Agent HTTP 服务已启动: http://localhost:%s\n", *port)
-	if err := http.ListenAndServe(":"+*port, nil); err != nil {
-		fmt.Fprintln(os.Stderr, "服务启动失败:", err)
+	if input == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"你的问题\"")
 		os.Exit(1)
 	}
-}
-
-type server struct {
-	llm    ChatLLM
-	reg    *Registry
-	logger *Logger
-}
-
-type chatReq struct {
-	Question string `json:"question"`
-}
-
-type chatResp struct {
-	Answer string `json:"answer"`
-	Guard  bool   `json:"guard,omitempty"`
-}
-
-func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"status": "ok"})
-}
-
-func (s *server) handleChat(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req chatReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Question) == "" {
-		http.Error(w, "question 必填", http.StatusBadRequest)
-		return
-	}
-	start := time.Now()
-	guardMsg := Guard(req.Question)
-
-	// 网络类错误自动重试 3 次(指数退避)
-	var answer string
-	err := Retry(r.Context(), 3, 500*time.Millisecond, func() error {
-		a, err := runReAct(r.Context(), s.llm, s.reg, req.Question, guardMsg)
-		if err != nil {
-			return &RetryableError{Err: err}
-		}
-		answer = a
-		return nil
-	})
-	s.logger.Log("info", "chat", map[string]any{
-		"question": truncateStr(req.Question, 80),
-		"guard":    guardMsg != "",
-		"duration": time.Since(start).String(),
-	})
+	answer, err := runToolCallParallel(context.Background(), llm, ex, input)
 	if err != nil {
-		s.logger.Log("error", "chat_failed", map[string]any{"err": err.Error()})
-		http.Error(w, "agent 执行失败: "+err.Error(), http.StatusInternalServerError)
-		return
+		fmt.Fprintln(os.Stderr, "失败:", err)
+		os.Exit(1)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(chatResp{Answer: answer, Guard: guardMsg != ""})
+	fmt.Println("\n=== 最终回答 ===")
+	fmt.Println(answer)
+}
+
+// registerDemoTools 注册几个"慢工具",方便观察并行效果。
+func registerDemoTools(r *Registry) {
+	mk := func(name, desc string, fn func(a, b float64) float64) {
+		r.Register(Tool{
+			Name:        name,
+			Description: desc,
+			Required:    []string{"a", "b"},
+			Run: func(ctx context.Context, args map[string]any) (string, error) {
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(300 * time.Millisecond): // 模拟耗时工具
+				}
+				a, ok1 := toFloat(args["a"])
+				b, ok2 := toFloat(args["b"])
+				if !ok1 || !ok2 {
+					return "", fmt.Errorf("参数 a、b 必须是数字")
+				}
+				return fmt.Sprintf("%v", fn(a, b)), nil
+			},
+		})
+	}
+	mk("add", "两个数相加", func(a, b float64) float64 { return a + b })
+	mk("mul", "两个数相乘", func(a, b float64) float64 { return a * b })
+	mk("sub", "两个数相减", func(a, b float64) float64 { return a - b })
+}
+
+func toFloat(v any) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case string:
+		var f float64
+		if _, err := fmt.Sscanf(n, "%g", &f); err == nil {
+			return f, true
+		}
+	}
+	return 0, false
 }

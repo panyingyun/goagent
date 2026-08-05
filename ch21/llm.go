@@ -18,7 +18,6 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-// ChatLLM 抽象,便于测试注入 mock。
 type ChatLLM interface {
 	Chat(ctx context.Context, messages []Message) (Message, error)
 }

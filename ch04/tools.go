@@ -10,16 +10,19 @@ import (
 	"strings"
 	"time"
 
-	_ "time/tzdata" // 内嵌时区数据库,Windows 上也能解析 Asia/Shanghai
+	_ "time/tzdata" // 内嵌时区数据库,保证 Windows 上也能解析 Asia/Shanghai
 )
 
-// Tool 是 Agent 可以调用的一个能力。Registry 负责登记和分发。
+// Tool 是 Agent 可以调用的一个能力:名字、说明、参数 Schema、执行函数。
 type Tool struct {
 	Name        string
 	Description string
+	Parameters  map[string]any // JSON Schema,function calling 模式会原样发给模型
 	Run         func(ctx context.Context, args map[string]any) (string, error)
 }
 
+// Registry 是工具注册表:Agent 与具体工具解耦,
+// 新增一个工具只需要 Register 一次。
 type Registry struct {
 	tools map[string]Tool
 }
@@ -56,11 +59,39 @@ func (r *Registry) Run(ctx context.Context, name, inputJSON string) (string, err
 	return t.Run(ctx, args)
 }
 
+// ToolDefs 生成发给模型的工具定义(function calling 模式用)。
+func (r *Registry) ToolDefs() []ToolDef {
+	defs := make([]ToolDef, 0, len(r.tools))
+	for _, n := range r.Names() {
+		t := r.tools[n]
+		defs = append(defs, ToolDef{
+			Type: "function",
+			Function: ToolFunction{
+				Name:        t.Name,
+				Description: t.Description,
+				Parameters:  t.Parameters,
+			},
+		})
+	}
+	return defs
+}
+
+// registerDefaultTools 注册两个演示用内置工具。
 func registerDefaultTools(r *Registry) {
 	r.Register(Tool{
 		Name:        "calculator",
 		Description: "计算数学表达式,支持 + - * / 和括号。示例: (12 + 4) * 8",
-		Run: func(_ context.Context, args map[string]any) (string, error) {
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"expression": map[string]any{
+					"type":        "string",
+					"description": "要计算的数学表达式",
+				},
+			},
+			"required": []string{"expression"},
+		},
+		Run: func(ctx context.Context, args map[string]any) (string, error) {
 			expr, _ := args["expression"].(string)
 			expr = strings.TrimSpace(expr)
 			if expr == "" {
@@ -77,7 +108,11 @@ func registerDefaultTools(r *Registry) {
 	r.Register(Tool{
 		Name:        "get_time",
 		Description: "获取当前日期和时间(北京时间 Asia/Shanghai)。",
-		Run: func(_ context.Context, _ map[string]any) (string, error) {
+		Parameters: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
+		},
+		Run: func(ctx context.Context, args map[string]any) (string, error) {
 			loc, err := time.LoadLocation("Asia/Shanghai")
 			if err != nil {
 				return "", err
@@ -87,7 +122,8 @@ func registerDefaultTools(r *Registry) {
 	})
 }
 
-// ---- 极简表达式求值器(递归下降),演示"工具内部也可以有逻辑" ----
+// ---- 一个极简的表达式求值器(递归下降解析) ----
+// 只为演示"工具内部也可以有逻辑",生产环境可以直接用第三方表达式库。
 
 type calcParser struct {
 	s   string

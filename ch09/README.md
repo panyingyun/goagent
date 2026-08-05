@@ -1,24 +1,27 @@
-# 课时9:真实工具——让 Agent 真的"干活"
+# 课时9:向量数据库与高级 RAG
 
-> 目标:给 Agent 装上联网、文件、命令、存储四只手,同时学会"工具安全"。
+> 目标:用不依赖外部 embedding Key 的方式做出"好用"的 RAG——混合检索 + 重排。
+> (需要真实 OpenAI embedding 时再看选修 ch19。)
 
 ## 本课时学什么
 
-1. **http_get**:请求公开 API/网页,Agent 第一次真正"联网";
-2. **read_file / write_file**:读写文件,但**限制在 docs 目录内**(防路径穿越);
-3. **run_command**:执行系统命令,但**白名单 + 超时**(防命令注入);
-4. **kv_get / kv_set**:一个持久化的键值存储,Agent 可以"记账";
-5. 安全三原则:**最小权限、白名单、超时**。
+1. **本地 HashEmbedder**:把文本哈希成 256 维向量,离线可跑,先讲透原理;
+2. **混合检索**:关键词(精确) + 向量(语义)按权重融合;
+3. **重排(Rerank)**:去重 + 多样性,避免 top-k 全是同一段话的变体;
+4. 生产中的向量数据库(Milvus / Qdrant / Chroma)本质就是
+   "能存向量 + 能按相似度检索的数据库",本课的 `HybridRetriever`
+   就是它的最小等价物。
 
 ## 目录结构
 
 ```text
 ch09/
-├── main.go        # 入口(自动准备 docs/notes.txt 示例文件)
-├── llm.go         # DeepSeek 客户端
-├── tools.go       # Registry + 6 个真实工具 + 安全校验
-├── agent.go       # ReAct 循环(课时4 的内容)
-├── tools_test.go  # 离线测试:http_get/路径穿越/白名单/KV
+├── embedder.go   # HashEmbedder(本地,离线)
+├── hybrid.go     # 混合检索 + 余弦相似度
+├── rerank.go     # 去重重排
+├── rag.go        # 切块 / 文档加载 / DeepSeek 调用
+├── main.go       # 索引 + 问答入口
+├── docs/         # 示例文档
 └── README.md
 ```
 
@@ -26,39 +29,28 @@ ch09/
 
 ```powershell
 cd E:\codex\project001\goagent\ch09
-go run . "访问 https://httpbin.org/get 看看返回什么"
-go run . "把 hello agent 写到 docs/note.txt"
-go run . "执行 go version 看看环境"
-go run . "读取 docs/notes.txt"
+go run . "员工生日当天可以休假吗?"
+go run . "住宿报销上限是多少?"
 ```
 
-注意观察 Agent 的每一轮:它会自己决定调用哪个工具,拿到 Observation 后继续。
+离线测试:
 
-## 安全设计(本课重点)
-
-```go
-// 1. 路径穿越防护:文件名最终必须落在 docs 目录内
-func safePath(root, name string) (string, error)
-
-// 2. 命令白名单:只允许明确的命令前缀
-func allowedCommand(cmd string) bool // 允许 go version / echo / dir
-
-// 3. 所有工具都有超时(5~10 秒),防止 Agent 把进程卡死
+```powershell
+go test ./... -v
 ```
 
-为什么必须有这些?因为**模型输出不可信**——用户可以让模型说
-"执行 `rm -rf /`",如果工具不做校验,你的电脑就遭殃了。这就是
-提示注入的威力,课时 10 会从 Agent 层面继续防御。
+## 和 ch19 的对比
+
+| | ch19 | ch09 |
+|---|---|---|
+| 向量化 | OpenAI(需 Key) | 本地 Hash(离线) |
+| 检索 | 纯向量 | 关键词 + 向量混合 |
+| 重排 | 无 | 去重 + 多样性 |
+| 目的 | 跑通链路 | 提高检索质量 |
 
 ## 练习
 
-1. 往白名单加一条 `python --version`,试运行;
-2. 故意让 Agent "读取 ../README.md",看它被拒绝后怎么跟你解释;
-3. 用 `kv_set` 让 Agent 记住"项目代号",再开一个新会话用 `kv_get` 问它;
-4. 思考:为什么 `http_get` 也要限制(比如只允许 https)?
-
-## 小结
-
-真实工具让 Agent 从"聊天机器人"变成"能干活的小助手",但能力越大、
-风险越大。这一课的安全三原则(最小权限、白名单、超时)是后续所有
-真实工具(数据库、支付、邮件)必须遵守的底线。
+1. 把 `KWRatio` 从 0.4 改成 0 或 1,对比检索结果;
+2. 在 `docs/` 加两个内容高度相似的文件,观察重排去重;
+3. 想一想:真实向量数据库还有哪些能力本课没做?
+   (提示:持久化、分区、过滤、增量更新。)

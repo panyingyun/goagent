@@ -1,40 +1,30 @@
-# 课时21:部署与运维
+# 课时21:评估进阶——LLM-as-Judge
 
-> 目标:让 Agent 服务具备上线的基本素质——健康检查、限流、优雅关闭、密钥安全。
+> 目标:解决 ch12 评估的痛点——主观题没法用"包含某句话"来断言,那就让 LLM 来当考官。
 
 ## 本课时学什么
 
-1. **健康检查**:`/health`(存活)+ `/ready`(就绪,检查依赖是否配好);
-2. **限流**:每 IP 每秒最多 N 次,防止被打爆;
-3. **优雅关闭**:收到 Ctrl+C / SIGTERM 后,等当前请求处理完再退出;
-4. **密钥管理**:只从环境变量读,不进代码、不进 git。
+1. **LLM-as-Judge**:用一个模型按评分标准给另一个模型的回答打分;
+2. **结构化评分**:要求输出 `{"score": 0~10, "reason": "..."}` 并解析校验;
+3. 分数归一化与异常兜底(夹到 0~10,没有 JSON 就报错)。
 
 ## 运行
 
 ```powershell
 cd E:\codex\project001\goagent\ch21
-go run .
+go run . "Go 的 goroutine 是什么?"
 ```
 
-另一个终端:
+先看回答,再看评审得分和理由。
 
-```powershell
-Invoke-RestMethod -Uri http://localhost:8080/health
-Invoke-RestMethod -Uri http://localhost:8080/ready
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"你好"}'
-```
+## 关键认知
 
-连续快速点 `/chat`,第 6 次会看到 429 限流。Ctrl+C 观察优雅关闭日志。
-
-## Docker 部署
-
-```powershell
-docker build -t goagent .
-docker run -p 8080:8080 -e DEEPSEEK_API_KEY=你的Key goagent
-```
+- Judge 和答题者可以是同一个模型,但**提示词不同**;
+- 评分标准越具体,评分越稳定(模糊的"好不好"方差极大);
+- 生产中可以混用:便宜模型答题,贵模型评审(ch13 的路由思想)。
 
 ## 练习
 
-1. 把限流窗口改成 10 秒,观察行为;
-2. 加一个 `/metrics` 接口,输出课时20 的指标;
-3. 想想生产还要补什么?(提示:日志聚合、监控告警、HTTPS、密钥轮换。)
+1. 加一条标准"是否包含示例代码",对比得分变化;
+2. 让两个不同 Judge 打分,看方差;
+3. 思考:LLM-as-Judge 有什么偏差?(提示:偏好冗长回答、顺序偏差。)

@@ -1,73 +1,109 @@
-# 课时4:Go 实现 ReAct
+# 课时4:综合案例——完整 AI Agent
 
-> 目标:亲手实现"思考-行动-观察"循环,让 LLM 学会调用工具。
+> 目标:把 LLM、提示词、ReAct 组装成一个完整 Agent,
+> 并接入 SKILL / MCP,额外体验原生 Function Calling。
 
 ## 本课时学什么
 
-- LLM 只会"说"不会"做",所以我们在外面套一个循环,把模型和工具接起来;
-- ReAct = Reasoning + Acting,是 Agent 最经典的循环范式;
-- 关键技巧:系统提示词里约定**文本协议**(Thought / Action / Action Input),
-  框架解析并执行工具,把结果以 `Observation` 放回对话,模型继续思考。
+- **组装**:LLM 负责"想",Tool 负责"做",Agent 用循环把两者接起来;
+- **两种工具调用方式**:
+  - `react`(默认):课时3 的文本协议循环;
+  - `tool`:原生 Function Calling,模型返回结构化 `tool_calls`,更稳;
+- **SKILL**:技能文件自动注入系统提示词(专章见课时5);
+- **MCP**:可选接入,服务器通过 stdio 变成 Agent 的一个工具(专章见课时16);
+- 一张图看懂最终架构:
+
+```mermaid
+flowchart LR
+    subgraph Agent
+        L[LLM DeepSeek] --> R[工具注册表 Registry]
+        R --> T1[calculator]
+        R --> T2[get_time]
+        R --> M[MCP 客户端]
+        S2[SKILL 技能文件] --> L
+    end
+    M -- stdio JSON-RPC --> S[MCP 服务器子进程]
+```
 
 ## 目录结构
 
 ```text
 ch04/
-├── main.go        # 入口
-├── llm.go         # LLM 客户端(课时1 的内容)
-├── tools.go       # 工具注册表 + calculator / get_time 两个工具
-├── agent.go       # 核心:ReAct 循环 + 文本协议解析
-├── agent_test.go  # 用本地 mock LLM 测试,离线可跑
-└── README.md
+├── main.go            # 入口:模式选择(react/tool)、MCP 接入、SKILL 加载
+├── llm.go             # LLM 客户端(课时1)
+├── agent.go           # ReAct 循环 + Function Calling 循环
+├── tools.go           # 工具注册表 + calculator / get_time
+├── skills.go          # SKILL 加载(课时5)
+├── mcpclient.go       # MCP 客户端(课时16)
+├── mcp/server/main.go # MCP 服务器(课时16)
+├── skills/            # 技能文件
+└── react_test.go      # 离线测试(mock LLM + MCP)
 ```
 
 ## 运行
 
 ```powershell
 cd E:\codex\project001\ch04
+
+# 文本 ReAct 模式(课时3 的方式)
 go run . "12 * 8 + 4 等于多少?"
-go run . "现在北京时间几点?"
+
+# 原生 Function Calling 模式
+go run . -mode tool "2 + 3 * 4 等于多少?"
+
+# 接入 MCP(先编译课时2的服务器)
+New-Item -ItemType Directory -Force bin
+go build -o bin\mcp-server.exe .\mcp\server
+go run . -mcp-server bin\mcp-server.exe "用 mcp 工具调用 echo,内容写 hello"
 ```
 
-你会看到完整循环的每一步:Thought → Action → Observation → Final Answer。
-
-不联网也能验证逻辑:
+离线验证(不需要 API Key):
 
 ```powershell
 go test ./... -v
 ```
 
-## ReAct 循环图
+## 两种模式对比
 
-```mermaid
-flowchart TD
-    A[用户问题] --> B[LLM 思考 Thought]
-    B --> C{需要工具?}
-    C -- 是 --> D[Action + Action Input]
-    D --> E[执行工具,得到 Observation]
-    E --> B
-    C -- 否 --> F[Final Answer]
-    F --> G[返回给用户]
-```
+ReAct(文本):
 
-## 代码怎么组织
+- 不依赖 API 特性,任何对话模型都能跑;
+- 格式靠约定,解析靠正则,模型偶尔会"跑偏",需要兜底提示。
 
-1. `buildSystemPrompt` 把"输出格式 + 工具列表"拼进 system 消息,告诉模型
-   什么时候该输出 Action、输出什么工具名;
-2. `runReAct` 是主循环:调 LLM → 检查有没有 `Final Answer` → 没有就解析
-   `Action` → `Registry.Run` 执行工具 → 把 `Observation` 追加进对话 → 再来一轮;
-3. `parseReAct` / `extractFinalAnswer` 用正则和花括号配对解析模型文本。
+Function Calling(原生):
 
-## 练习
+- 工具定义(名字、说明、参数 Schema)直接发给模型;
+- 模型返回结构化 `tool_calls`,参数是干净 JSON;
+- 稳定、生产常用,要求模型支持 `tools` 参数(DeepSeek v4 两个模型都支持)。
 
-1. 在 `tools.go` 里加一个 `random` 工具(返回随机数),注册后试试
-   "给我一个 1 到 100 的随机数",观察模型会不会用;
-2. 把 `maxIterations` 改成 2,问一个需要 3 步的问题,观察 Agent 怎么"认输";
-3. 思考:如果模型输出了 `Action Input: {expression: "..."}`(参数名没加引号),
-   Agent 会怎样?——这就是文本协议的脆弱点,也是课时 5 里
-   Function Calling(结构化工具调用)更稳的原因。
+## SKILL 与 MCP 在 Agent 里的位置
 
-## 小结
+- SKILL 改的是**提示词**:`skills/*.md` 被拼进 system 消息,约束模型行为;
+- MCP 接的是**工具**:`mcp` 是一个普通工具,转发到 MCP 服务器,
+  服务器上的工具(echo 等)对 Agent 来说就像本地工具一样;
+- 所以整套架构可以一句话概括:**LLM 负责想,Tool 负责做,
+  SKILL 负责告诉模型怎么做,MCP 让工具即插即用。**
 
-到这里,你已经有一个"会调用工具"的 Agent 了。课时 5 会把 SKILL、
-MCP、Function Calling 全部装进来,组成完整的课程案例。
+## 练习(综合题)
+
+1. 给 MCP 服务器加一个 `multiply` 工具,再给 Agent 注册一个本地工具
+   `random`,分别用 react 和 tool 两种模式问它;
+2. 新增一个 `skills/poet.md`,观察它对计算问题的回答格式是否也受影响;
+3. 把默认模型改成 `deepseek-v4-pro`,对比复杂多步任务的表现和速度;
+4. 说出 Agent 在什么情况下会"陷入死循环",框架可以用哪些手段防止?
+   (提示:maxIterations、Observation 里的错误信息、格式兜底。)
+
+## 课程总结
+
+回顾 Agent 内核几课:
+
+| 课时 | 内容 | 一句话 |
+|---|---|---|
+| 1 | LLM | 模型只会"说",API 是通道 |
+| 2 | 提示词工程 | 说明书写清楚,行为更可控 |
+| 3 | ReAct | 思考-行动-观察的循环 |
+| 4 | Agent | 把循环 + 工具 + SKILL/MCP 组装起来 |
+| 5 | SKILL | 行为规范打包成提示词文件 |
+| 16 | MCP | 工具的"USB-C",协议层(可后置) |
+
+现在你可以回去修改任意一课,观察综合 Agent 的行为变化——这就是"组件化"的好处。

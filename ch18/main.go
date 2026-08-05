@@ -1,106 +1,97 @@
-// 课时18:模型路由与成本优化
+// 课时18:Agent Web 界面
 //
-// 演示:不同任务选不同模型(flash/pro),带预算控制;相同问题命中缓存,不再花钱。
+// 给 Agent 套一个浏览器聊天界面:
+// GET /            -> 网页
+// POST /chat       -> JSON 问答
+// GET /chat/stream -> SSE 流式问答
 //
 // 运行(已配置 DEEPSEEK_API_KEY):
 //
-//	go run . "1+1 等于多少?"
-//	go run . "帮我分析一下 Go 和 Rust 的优缺点"
+//	go run .
+//
+// 然后浏览器打开 http://localhost:8080
 package main
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
-	"time"
 )
 
+type server struct {
+	llm ChatLLM
+}
+
 func main() {
-	apiKey := os.Getenv("DEEPSEEK_API_KEY")
-	if apiKey == "" {
+	llm := NewLLMClient()
+	if llm.APIKey == "" {
 		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY")
 		os.Exit(1)
 	}
-	question := strings.Join(os.Args[1:], " ")
-	if question == "" {
-		data, _ := io.ReadAll(os.Stdin)
-		question = strings.TrimSpace(string(data))
-	}
-	if question == "" {
-		fmt.Fprintln(os.Stderr, "用法: go run . \"问题\"")
+	s := &server{llm: llm}
+	http.HandleFunc("/", s.handleIndex)
+	http.HandleFunc("/chat", s.handleChat)
+	http.HandleFunc("/chat/stream", s.handleStream)
+	fmt.Println("打开 http://localhost:8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	router := NewRouter()
-	// 第一次提问
-	askAndPrint(router, apiKey, question)
-	// 第二次相同问题 -> 缓存命中
-	askAndPrint(router, apiKey, question)
-
-	fmt.Printf("\n本次会话花费估算: $%.4f\n", router.Spent())
 }
 
-func askAndPrint(router *Router, apiKey, question string) {
-	if ans, ok := router.cache.Get(question); ok {
-		fmt.Println(">>> 缓存命中,不再调用模型")
-		fmt.Println(ans)
-		return
-	}
-	model := router.Choose(question)
-	fmt.Printf(">>> 选择模型: %s(复杂度: %s)\n", model.Name, model.Capability)
-	answer, err := chatWithModel(apiKey, model.Name, question)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "调用失败:", err)
-		return
-	}
-	// 粗略 token 估算:中文 1 字约 1 token
-	router.Record(model, len([]rune(question)), len([]rune(answer)))
-	router.cache.Set(question, answer)
-	fmt.Println(answer)
+func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "web/index.html")
 }
 
-func chatWithModel(apiKey, model, question string) (string, error) {
-	body, _ := json.Marshal(map[string]any{
-		"model": model,
-		"messages": []any{
-			map[string]any{"role": "system", "content": "回答简洁。"},
-			map[string]any{"role": "user", "content": question},
-		},
-		"stream": false,
+func (s *server) handleChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Question string `json:"question"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Question == "" {
+		http.Error(w, "question 必填", http.StatusBadRequest)
+		return
+	}
+	reply, err := s.llm.Chat(r.Context(), []Message{
+		{Role: "system", Content: "你是乐于助人的中文助手。"},
+		{Role: "user", Content: req.Question},
 	})
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
-		"https://api.deepseek.com/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return "", err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	resp, err := (&http.Client{Timeout: 120 * time.Second}).Do(req)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"answer": reply.Content})
+}
+
+// handleStream 用 SSE 逐字推送回复。
+func (s *server) handleStream(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		http.Error(w, "缺少参数 q", http.StatusBadRequest)
+		return
+	}
+	fl, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "不支持流式", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	fl.Flush()
+	err := s.llm.StreamChat(r.Context(), []Message{
+		{Role: "system", Content: "你是乐于助人的中文助手。"},
+		{Role: "user", Content: q},
+	}, func(delta string) {
+		fmt.Fprintf(w, "data: %s\n\n", delta)
+		fl.Flush()
+	})
 	if err != nil {
-		return "", err
+		fmt.Fprintf(w, "data: [ERROR] %v\n\n", err)
 	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API 返回 %d: %s", resp.StatusCode, string(data))
-	}
-	var out struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return "", err
-	}
-	if len(out.Choices) == 0 {
-		return "", fmt.Errorf("没有 choices")
-	}
-	return out.Choices[0].Message.Content, nil
 }

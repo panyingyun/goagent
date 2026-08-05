@@ -31,6 +31,6 @@ client, _ := langsmith.NewClient(langsmith.WithAPIKey(os.Getenv("LANGSMITH_API_K
 
 ## 练习
 
-1. 给 run 加 `cost` 属性(结合 ch18 的成本估算);
-2. 把 run 树同时写进日志文件(结合 ch10 的结构化日志);
+1. 给 run 加 `cost` 属性(结合 ch13 的成本估算);
+2. 把 run 树同时写进日志文件(结合 ch12 的结构化日志);
 3. 有条件的话,注册 LangSmith 账号,把 run 真正上传上去看可视化。

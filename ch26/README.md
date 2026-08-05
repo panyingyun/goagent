@@ -35,7 +35,7 @@ ch26/
 │   ├── models.go          # 数据模型(与设计稿 §6 对应)
 │   ├── store.go           # SQLite 存储(表结构按设计稿 §8)
 │   ├── llm.go             # DeepSeek service(设计稿 §10)
-│   ├── prompt.go + prompt.txt  # 系统提示词(独立文件,呼应 ch03 SKILL)
+│   ├── prompt.go + prompt.txt  # 系统提示词(独立文件,呼应 ch05 SKILL)
 │   ├── apply.go           # graphState 更新规则(设计稿 §14)+ 意图兜底
 │   ├── api.go             # HTTP API + chat 流程(设计稿 §9)
 │   └── api_test.go        # 9 条验收用例的 Go 实现(mock DeepSeek,离线)
@@ -143,15 +143,15 @@ flowchart LR
 
 | 用到的地方 | 对应课时 |
 |---|---|
-| DeepSeek 客户端 / 结构化输出 / 提示词(独立文件) | ch01 / ch11 / ch03 |
+| DeepSeek 客户端 / 结构化输出 / 提示词(独立文件) | ch01 / ch02 / ch05 |
 | 多轮上下文 + recentMessages | ch06 |
-| 解析校验、默认值补齐、意图兜底、重试 | ch10 / ch13 |
-| SQLite 持久化、检查点思想 | ch06 / ch14 |
-| HTTP 服务、CORS、前端托管 | ch10 / ch25 |
-| 结构化日志(可选 DEEPSEEK_DEBUG) | ch20 |
-| 工具安全思路(禁 eval、白名单函数) | ch09 |
+| 解析校验、默认值补齐、意图兜底、重试 | ch12 / ch10 |
+| SQLite 持久化、检查点思想 | ch06 / ch11 |
+| HTTP 服务、CORS、前端托管 | ch12 / ch25 |
+| 结构化日志(可选 DEEPSEEK_DEBUG) | ch14 |
+| 工具安全思路(禁 eval、白名单函数) | ch08 |
 | 组件化分层(service/apply/handler) | ch22 |
-| 状态更新规则(状态机) | ch14 / ch23 |
+| 状态更新规则(状态机) | ch11 / ch23 |
 
 ## 真实联调踩过的三个坑(也是教学点)
 

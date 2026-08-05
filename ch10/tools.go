@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
-
-	_ "time/tzdata"
 )
 
 type Tool struct {
 	Name        string
 	Description string
+	Required    []string // 必填参数
 	Run         func(ctx context.Context, args map[string]any) (string, error)
 }
 
@@ -39,194 +39,121 @@ func (r *Registry) Names() []string {
 	return names
 }
 
-func (r *Registry) Run(ctx context.Context, name, inputJSON string) (string, error) {
+func (r *Registry) Get(name string) (Tool, bool) {
 	t, ok := r.tools[name]
+	return t, ok
+}
+
+// Executor 在 Registry 外加了三层能力:参数校验、结果缓存、并行执行。
+type Executor struct {
+	reg   *Registry
+	cache *Cache
+}
+
+func NewExecutor(reg *Registry) *Executor {
+	return &Executor{reg: reg, cache: NewCache(60 * time.Second)}
+}
+
+// Execute 校验 -> 查缓存 -> 执行 -> 写缓存。
+func (e *Executor) Execute(ctx context.Context, name, argsJSON string) (string, error) {
+	tool, ok := e.reg.Get(name)
 	if !ok {
-		return "", fmt.Errorf("未知工具: %s(可用: %s)", name, strings.Join(r.Names(), ", "))
+		return "", fmt.Errorf("未知工具: %s", name)
 	}
 	var args map[string]any
-	if strings.TrimSpace(inputJSON) != "" {
-		if err := json.Unmarshal([]byte(inputJSON), &args); err != nil {
-			return "", fmt.Errorf("Action Input 不是合法 JSON: %w", err)
+	if strings.TrimSpace(argsJSON) != "" {
+		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
+			return "", fmt.Errorf("参数不是合法 JSON: %w", err)
 		}
 	}
-	return t.Run(ctx, args)
-}
-
-func registerDefaultTools(r *Registry) {
-	r.Register(Tool{
-		Name:        "calculator",
-		Description: "计算数学表达式,支持 + - * / 和括号。示例: (12 + 4) * 8",
-		Run: func(_ context.Context, args map[string]any) (string, error) {
-			expr, _ := args["expression"].(string)
-			if strings.TrimSpace(expr) == "" {
-				return "", errors.New("缺少 expression 参数")
-			}
-			v, err := evalCalc(expr)
-			if err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("%v", v), nil
-		},
-	})
-	r.Register(Tool{
-		Name:        "get_time",
-		Description: "获取当前日期和时间(北京时间 Asia/Shanghai)。",
-		Run: func(_ context.Context, _ map[string]any) (string, error) {
-			loc, err := time.LoadLocation("Asia/Shanghai")
-			if err != nil {
-				return "", err
-			}
-			return time.Now().In(loc).Format("2006-01-02 15:04:05 (Monday)"), nil
-		},
-	})
-}
-
-func truncateStr(s string, n int) string {
-	runes := []rune(s)
-	if len(runes) <= n {
-		return s
-	}
-	return string(runes[:n]) + "..."
-}
-
-// ---- 极简表达式求值器 ----
-
-type calcParser struct {
-	s   string
-	pos int
-}
-
-func evalCalc(expr string) (float64, error) {
-	p := &calcParser{s: expr}
-	v, err := p.parseExpr()
-	if err != nil {
-		return 0, err
-	}
-	p.skipSpace()
-	if p.pos != len(p.s) {
-		return 0, fmt.Errorf("表达式末尾有无法解析的内容: %q", p.s[p.pos:])
-	}
-	return v, nil
-}
-
-func (p *calcParser) skipSpace() {
-	for p.pos < len(p.s) && (p.s[p.pos] == ' ' || p.s[p.pos] == '\t') {
-		p.pos++
-	}
-}
-
-func (p *calcParser) parseExpr() (float64, error) {
-	v, err := p.parseTerm()
-	if err != nil {
-		return 0, err
-	}
-	for {
-		p.skipSpace()
-		if p.pos >= len(p.s) {
-			return v, nil
-		}
-		switch p.s[p.pos] {
-		case '+':
-			p.pos++
-			rhs, err := p.parseTerm()
-			if err != nil {
-				return 0, err
-			}
-			v += rhs
-		case '-':
-			p.pos++
-			rhs, err := p.parseTerm()
-			if err != nil {
-				return 0, err
-			}
-			v -= rhs
-		default:
-			return v, nil
+	for _, f := range tool.Required {
+		if v, ok := args[f]; !ok || v == "" {
+			return "", fmt.Errorf("缺少必填参数: %s", f)
 		}
 	}
-}
-
-func (p *calcParser) parseTerm() (float64, error) {
-	v, err := p.parseFactor()
-	if err != nil {
-		return 0, err
-	}
-	for {
-		p.skipSpace()
-		if p.pos >= len(p.s) {
-			return v, nil
-		}
-		switch p.s[p.pos] {
-		case '*':
-			p.pos++
-			rhs, err := p.parseFactor()
-			if err != nil {
-				return 0, err
-			}
-			v *= rhs
-		case '/':
-			p.pos++
-			rhs, err := p.parseFactor()
-			if err != nil {
-				return 0, err
-			}
-			if rhs == 0 {
-				return 0, errors.New("除数不能为 0")
-			}
-			v /= rhs
-		default:
-			return v, nil
-		}
-	}
-}
-
-func (p *calcParser) parseFactor() (float64, error) {
-	p.skipSpace()
-	if p.pos < len(p.s) && (p.s[p.pos] == '+' || p.s[p.pos] == '-') {
-		sign := 1.0
-		if p.s[p.pos] == '-' {
-			sign = -1
-		}
-		p.pos++
-		v, err := p.parseFactor()
-		if err != nil {
-			return 0, err
-		}
-		return sign * v, nil
-	}
-	return p.parsePrimary()
-}
-
-func (p *calcParser) parsePrimary() (float64, error) {
-	p.skipSpace()
-	if p.pos >= len(p.s) {
-		return 0, errors.New("表达式不完整")
-	}
-	if p.s[p.pos] == '(' {
-		p.pos++
-		v, err := p.parseExpr()
-		if err != nil {
-			return 0, err
-		}
-		p.skipSpace()
-		if p.pos >= len(p.s) || p.s[p.pos] != ')' {
-			return 0, errors.New("缺少右括号 )")
-		}
-		p.pos++
+	key := name + "|" + argsJSON
+	if v, ok := e.cache.Get(key); ok {
 		return v, nil
 	}
-	start := p.pos
-	for p.pos < len(p.s) && ((p.s[p.pos] >= '0' && p.s[p.pos] <= '9') || p.s[p.pos] == '.') {
-		p.pos++
+	out, err := tool.Run(ctx, args)
+	if err != nil {
+		return "", err
 	}
-	if start == p.pos {
-		return 0, fmt.Errorf("无法解析的字符: %q", p.s[p.pos])
-	}
-	raw := p.s[start:p.pos]
-	var v float64
-	if _, err := fmt.Sscanf(raw, "%g", &v); err != nil {
-		return 0, fmt.Errorf("无效数字 %q", raw)
-	}
-	return v, nil
+	e.cache.Set(key, out)
+	return out, nil
 }
+
+// ToolResult 是并行执行一个工具调用的结果。
+type ToolResult struct {
+	ID   string
+	Name string
+	Out  string
+	Err  error
+}
+
+// ExecuteParallel 并发执行多个工具调用(保持输入顺序),用固定 worker 池。
+func (e *Executor) ExecuteParallel(ctx context.Context, calls []ToolCall) []ToolResult {
+	results := make([]ToolResult, len(calls))
+	if len(calls) == 0 {
+		return results
+	}
+	jobs := make(chan int)
+	var wg sync.WaitGroup
+	workers := len(calls)
+	if workers > 4 {
+		workers = 4
+	}
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				out, err := e.Execute(ctx, calls[i].Function.Name, calls[i].Function.Arguments)
+				results[i] = ToolResult{ID: calls[i].ID, Name: calls[i].Function.Name, Out: out, Err: err}
+			}
+		}()
+	}
+	go func() {
+		defer close(jobs)
+		for i := range calls {
+			jobs <- i
+		}
+	}()
+	wg.Wait()
+	return results
+}
+
+// Cache 是带 TTL 的简单结果缓存。
+type Cache struct {
+	mu      sync.Mutex
+	ttl     time.Duration
+	entries map[string]cacheEntry
+}
+
+type cacheEntry struct {
+	value   string
+	expires time.Time
+}
+
+func NewCache(ttl time.Duration) *Cache {
+	return &Cache{ttl: ttl, entries: map[string]cacheEntry{}}
+}
+
+func (c *Cache) Get(key string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e, ok := c.entries[key]
+	if !ok || time.Now().After(e.expires) {
+		delete(c.entries, key)
+		return "", false
+	}
+	return e.value, true
+}
+
+func (c *Cache) Set(key, value string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries[key] = cacheEntry{value: value, expires: time.Now().Add(c.ttl)}
+}
+
+var errNoParams = errors.New("无参数")

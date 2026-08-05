@@ -1,85 +1,172 @@
+// 课时5:Go 实现 SKILL 调用
+//
+// SKILL(技能)= 打包成文件的行为说明书。本质上是"系统提示词管理":
+// 启动时把 skills/*.md 读进来,拼进 system 消息,模型就会遵守其中的规范。
+//
+// 运行(已配置好 DEEPSEEK_API_KEY):
+//   go run . "12 * 8 + 4 等于多少?"
+//   go run . "把 Hello world 翻译成中文"
 package main
 
 import (
+	"bytes"
 	"context"
-	"flag"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
-func main() {
-	var (
-		mode      = flag.String("mode", "react", "运行模式: react(文本 ReAct)或 tool(原生函数调用)")
-		mcpServer = flag.String("mcp-server", "", "MCP 服务器可执行文件路径;设置后注册 mcp 工具")
-		skillsDir = flag.String("skills", "skills", "SKILL 文件目录(存放 *.md)")
-	)
-	flag.Parse()
+const defaultBaseURL = "https://api.deepseek.com"
+const defaultModel = "deepseek-v4-flash"
 
-	llm := NewLLMClient()
-	if llm.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
-		fmt.Fprintln(os.Stderr, `示例: $env:DEEPSEEK_API_KEY="sk-..."; go run . "12 * 8 + 4 等于多少?"`)
-		os.Exit(1)
-	}
-
-	reg := NewRegistry()
-	registerDefaultTools(reg)
-
-	skills, err := loadSkills(*skillsDir)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "警告: 读取技能失败:", err)
-	} else if len(skills) == 0 {
-		fmt.Fprintln(os.Stderr, "警告: skills 目录为空,未加载技能")
-	} else {
-		fmt.Fprintf(os.Stderr, "已加载 %d 个 SKILL: %s\n", len(skills), skillNames(skills))
-	}
-
-	if *mcpServer != "" {
-		client, err := StartMCPClient(context.Background(), *mcpServer)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "MCP 连接失败:", err)
-			os.Exit(1)
-		}
-		defer client.Close()
-		registerMCPTool(reg, client)
-		fmt.Fprintln(os.Stderr, "已通过 MCP 注册外部工具(工具名: mcp)")
-	}
-
-	input := strings.Join(flag.Args(), " ")
-	if input == "" {
-		data, _ := io.ReadAll(os.Stdin)
-		input = strings.TrimSpace(string(data))
-	}
-	if input == "" {
-		fmt.Fprintln(os.Stderr, "请输入一个问题,例如: go run . \"12 * 8 + 4 等于多少?\"")
-		os.Exit(1)
-	}
-
-	var answer string
-	switch *mode {
-	case "react":
-		answer, err = runReAct(context.Background(), llm, reg, skills, input)
-	case "tool":
-		answer, err = runToolCall(context.Background(), llm, reg, skills, input)
-	default:
-		fmt.Fprintf(os.Stderr, "未知模式: %s(可选 react / tool)\n", *mode)
-		os.Exit(1)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "运行失败:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("\n=== 最终回答 ===")
-	fmt.Println(answer)
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
-func skillNames(skills []Skill) string {
-	names := make([]string, 0, len(skills))
-	for _, s := range skills {
-		names = append(names, s.Name)
+// Skill 是一个技能:名字 + 一段行为规范。
+type Skill struct {
+	Name         string
+	Instructions string
+}
+
+func main() {
+	question := strings.Join(os.Args[1:], " ")
+	if question == "" {
+		data, _ := io.ReadAll(os.Stdin)
+		question = strings.TrimSpace(string(data))
 	}
-	return strings.Join(names, ", ")
+	if question == "" {
+		fmt.Fprintln(os.Stderr, "用法: go run . \"你的问题\"")
+		os.Exit(1)
+	}
+
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Fprintln(os.Stderr, "缺少 DEEPSEEK_API_KEY 环境变量")
+		os.Exit(1)
+	}
+
+	// 1. 加载 skills/ 目录下的所有技能
+	skills, err := loadSkills("skills")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "加载技能失败:", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stderr, "已加载 %d 个 SKILL:\n", len(skills))
+	for _, s := range skills {
+		fmt.Fprintf(os.Stderr, " - %s\n", s.Name)
+	}
+
+	// 2. 把技能拼进 system 消息
+	system := "你是一个乐于助人的中文助手。\n\n## 你掌握的技能(SKILL)\n"
+	for _, s := range skills {
+		system += fmt.Sprintf("\n### 技能: %s\n%s\n", s.Name, s.Instructions)
+	}
+
+	// 3. 正常对话
+	reply, err := chat(apiKey, []Message{
+		{Role: "system", Content: system},
+		{Role: "user", Content: question},
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "调用失败:", err)
+		os.Exit(1)
+	}
+	fmt.Println("模型回复:")
+	fmt.Println(reply)
+}
+
+// loadSkills 读取 skills/*.md,约定第一行是 "# 技能名",其余是技能内容。
+func loadSkills(dir string) ([]Skill, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var skills []Skill
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		text := strings.TrimSpace(string(data))
+		if text == "" {
+			continue
+		}
+		lines := strings.SplitN(text, "\n", 2)
+		name := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(lines[0]), "#"))
+		instructions := ""
+		if len(lines) == 2 {
+			instructions = strings.TrimSpace(lines[1])
+		}
+		skills = append(skills, Skill{Name: name, Instructions: instructions})
+	}
+	return skills, nil
+}
+
+// chat 与课时1 完全相同,只负责发请求、拿回复。
+func chat(apiKey string, messages []Message) (string, error) {
+	body, err := json.Marshal(map[string]any{
+		"model":    envOr("DEEPSEEK_MODEL", defaultModel),
+		"messages": messages,
+		"stream":   false,
+	})
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost,
+		envOr("DEEPSEEK_BASE_URL", defaultBaseURL)+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("请求失败(请检查网络): %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API 返回 %d: %s", resp.StatusCode, string(data))
+	}
+	var out struct {
+		Choices []struct {
+			Message Message `json:"message"`
+		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return "", fmt.Errorf("解析响应失败: %w", err)
+	}
+	if out.Error != nil {
+		return "", fmt.Errorf("API 错误: %s", out.Error.Message)
+	}
+	if len(out.Choices) == 0 {
+		return "", fmt.Errorf("响应中没有 choices")
+	}
+	return out.Choices[0].Message.Content, nil
+}
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }

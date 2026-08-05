@@ -2,27 +2,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
 <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 z" fill="#2563eb"/></marker></defs>
 <rect width="1200" height="760" fill="#faf8ff"/>
-<text x="40" y="48" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="26" font-weight="700">ch05 综合 Agent(ReAct + MCP + SKILL + LLM)</text>
+<text x="40" y="48" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="26" font-weight="700">ch05 Go 实现 SKILL 调用</text>
 <text x="40" y="76" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="14">代码架构图 · 文件结构与调用流(基于最新代码生成)</text>
 
-<rect x="237" y="112" width="165" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="319.5" y="148.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">main.go</text><text x="319.5" y="176.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">模式选择 react / tool</text>
-<rect x="230" y="230" width="180" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="266.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">agent.go</text><text x="320.0" y="294.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">runReAct / runToolCall</text>
-<rect x="248" y="348" width="144" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="384.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">llm.go</text><text x="320.0" y="412.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">DeepSeek 客户端</text>
-<rect x="222" y="466" width="196" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="502.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">tools.go + skills.go</text><text x="320.0" y="530.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">工具注册表 + 技能加载</text>
-<rect x="186" y="584" width="267" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="319.5" y="620.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">mcpclient.go → mcp/server</text><text x="319.5" y="648.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">MCP 工具接入</text>
-<line x1="319.5" y1="208" x2="320.0" y2="230" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
-<line x1="320.0" y1="326" x2="320.0" y2="348" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="261" y="112" width="118" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="148.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">main.go</text><text x="320.0" y="176.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">读取用户问题</text>
+<rect x="253" y="230" width="133" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="319.5" y="266.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">loadSkills()</text><text x="319.5" y="294.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">读取 skills/*.md</text>
+<rect x="224" y="348" width="192" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="384.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">拼接 system 提示词</text><text x="320.0" y="412.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">技能注入提示词</text>
+<rect x="254" y="466" width="132" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="502.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">chat()</text><text x="320.0" y="530.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">调用 DeepSeek</text>
+<rect x="261" y="584" width="118" height="96" rx="10" fill="#ffffff" stroke="#c3c6d7" stroke-width="1.5"/><text x="320.0" y="620.0" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="17" font-weight="600" text-anchor="middle">输出回复</text><text x="320.0" y="648.0" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="13" text-anchor="middle">模型遵守技能</text>
+<line x1="320.0" y1="208" x2="319.5" y2="230" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="319.5" y1="326" x2="320.0" y2="348" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
 <line x1="320.0" y1="444" x2="320.0" y2="466" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
-<line x1="320.0" y1="562" x2="319.5" y2="584" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+<line x1="320.0" y1="562" x2="320.0" y2="584" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
 <text x="700" y="110" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="15" font-weight="600">其他文件</text>
 <rect x="700" y="138" width="450" height="52" rx="8" fill="#f3f3fe" stroke="#c3c6d7" stroke-width="1"/>
-<text x="716" y="160" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">react_test.go</text>
-<text x="716" y="178" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">ReAct + MCP 集成测试</text>
+<text x="716" y="160" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">skills/math-tutor.md</text>
+<text x="716" y="178" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">数学三步回答规范</text>
 <rect x="700" y="200" width="450" height="52" rx="8" fill="#f3f3fe" stroke="#c3c6d7" stroke-width="1"/>
-<text x="716" y="222" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">skills/math-skill.md</text>
-<text x="716" y="240" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">技能文件</text>
+<text x="716" y="222" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">skills/translator.md</text>
+<text x="716" y="240" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">翻译格式规范</text>
 <rect x="700" y="262" width="450" height="52" rx="8" fill="#f3f3fe" stroke="#c3c6d7" stroke-width="1"/>
 <text x="716" y="284" fill="#191b23" font-family="Microsoft YaHei, sans-serif" font-size="14" font-weight="600">README.md</text>
-<text x="716" y="302" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">综合架构讲解</text>
+<text x="716" y="302" fill="#434655" font-family="Microsoft YaHei, sans-serif" font-size="12">SKILL 概念讲解</text>
 <text x="1190" y="744" fill="#737686" font-family="Microsoft YaHei, sans-serif" font-size="11" text-anchor="end">Go Agent 课程 ch01~ch26</text>
 </svg>

@@ -1,40 +1,24 @@
-# 课时8:RAG——让 Agent 拥有私有知识
+# 课时8:真实工具——让 Agent 真的"干活"
 
-> 目标:让 Agent 回答"模型训练数据里没有"的问题——比如你们公司的内部制度。
+> 目标:给 Agent 装上联网、文件、命令、存储四只手,同时学会"工具安全"。
 
 ## 本课时学什么
 
-1. **RAG 是什么**:Retrieval-Augmented Generation(检索增强生成),
-   先从私有文档里检索相关内容,再让 LLM 基于检索结果回答;
-2. **为什么需要它**:模型不知道你的文档,直接问会"一本正经地编";
-3. **路线 B**:DeepSeek 官方 API **没有 embedding 接口**,所以向量化交给
-   OpenAI `text-embedding-3-small`(需要 `OPENAI_API_KEY`),"想"仍然由 DeepSeek 负责;
-4. 完整流水线:切块 → 向量化 → 建索引 → 检索 → 注入提示词 → 回答。
-
-## 流水线
-
-```mermaid
-flowchart LR
-    A[文档 docs/*.txt] --> B[切块 chunk]
-    B --> C[OpenAI embedding 向量化]
-    C --> D[索引 index.json]
-    Q[用户问题] --> E[向量化问题]
-    E --> F[余弦相似度检索 top-3]
-    D --> F
-    F --> G[片段注入 system 提示词]
-    G --> H[DeepSeek 回答]
-```
+1. **http_get**:请求公开 API/网页,Agent 第一次真正"联网";
+2. **read_file / write_file**:读写文件,但**限制在 docs 目录内**(防路径穿越);
+3. **run_command**:执行系统命令,但**白名单 + 超时**(防命令注入);
+4. **kv_get / kv_set**:一个持久化的键值存储,Agent 可以"记账";
+5. 安全三原则:**最小权限、白名单、超时**。
 
 ## 目录结构
 
 ```text
 ch08/
-├── main.go         # 建索引 + 问答入口
-├── embedder.go     # Embedder 接口 + OpenAIEmbedder(路线B)
-├── vector.go       # 余弦相似度
-├── rag.go          # 切块、索引构建/保存/检索
-├── docs/sample.txt # 示例私有文档(虚构的公司制度)
-├── rag_test.go     # 离线测试(切块/相似度/检索/mock embedding)
+├── main.go        # 入口(自动准备 docs/notes.txt 示例文件)
+├── llm.go         # DeepSeek 客户端
+├── tools.go       # Registry + 6 个真实工具 + 安全校验
+├── agent.go       # ReAct 循环(课时3 的内容)
+├── tools_test.go  # 离线测试:http_get/路径穿越/白名单/KV
 └── README.md
 ```
 
@@ -42,34 +26,39 @@ ch08/
 
 ```powershell
 cd E:\codex\project001\goagent\ch08
-go run . "员工生日当天可以休假吗?"
-go run . "年假最多多少天?"
+go run . "访问 https://httpbin.org/get 看看返回什么"
+go run . "把 hello agent 写到 docs/note.txt"
+go run . "执行 go version 看看环境"
+go run . "读取 docs/notes.txt"
 ```
 
-首次运行会用 `OPENAI_API_KEY` 给 `docs/sample.txt` 生成向量并保存到
-`index.json`(之后秒开)。回答只来自检索到的资料,资料没有的会明确说
-"资料中没有相关信息"。
+注意观察 Agent 的每一轮:它会自己决定调用哪个工具,拿到 Observation 后继续。
 
-离线测试:
+## 安全设计(本课重点)
 
-```powershell
-go test ./... -v
+```go
+// 1. 路径穿越防护:文件名最终必须落在 docs 目录内
+func safePath(root, name string) (string, error)
+
+// 2. 命令白名单:只允许明确的命令前缀
+func allowedCommand(cmd string) bool // 允许 go version / echo / dir
+
+// 3. 所有工具都有超时(5~10 秒),防止 Agent 把进程卡死
 ```
 
-## 为什么"检索"比"全塞进去"好
-
-文档可能几千页,不可能全部塞进提示词(上下文有限、还贵)。
-检索只挑最相关的 3 段,既省 token 又更聚焦——这就是 RAG 的核心思想。
+为什么必须有这些?因为**模型输出不可信**——用户可以让模型说
+"执行 `rm -rf /`",如果工具不做校验,你的电脑就遭殃了。这就是
+提示注入的威力,课时12 会从 Agent 层面继续防御。
 
 ## 练习
 
-1. 往 `docs/` 加一个新文件(比如"请假流程"),问一个只有新文件里有答案的问题;
-2. 删除 `index.json` 重建索引,对比两次回答;
-3. 把 `Search` 的 k 从 3 改成 1,观察回答质量下降;
-4. 思考:检索结果本身可能包含错误信息或恶意内容,该怎么防?
-   (提示:这就是课时 10 要讲的提示注入防护。)
+1. 往白名单加一条 `python --version`,试运行;
+2. 故意让 Agent "读取 ../README.md",看它被拒绝后怎么跟你解释;
+3. 用 `kv_set` 让 Agent 记住"项目代号",再开一个新会话用 `kv_get` 问它;
+4. 思考:为什么 `http_get` 也要限制(比如只允许 https)?
 
 ## 小结
 
-RAG = 检索 + 生成。路线 B 把"向量化"外包给 OpenAI,换来的是课程无需本地
-模型也能跑通真实架构;课时 12 会在此基础上接真实向量数据库做混合检索。
+真实工具让 Agent 从"聊天机器人"变成"能干活的小助手",但能力越大、
+风险越大。这一课的安全三原则(最小权限、白名单、超时)是后续所有
+真实工具(数据库、支付、邮件)必须遵守的底线。

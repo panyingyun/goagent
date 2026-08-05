@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// chunkText 按段落切块(与 ch08 相同)。
+// chunkText 按段落切块(与 ch19 相同)。
 func chunkText(text string, maxLen int) []string {
 	paras := strings.Split(text, "\n")
 	var chunks []string

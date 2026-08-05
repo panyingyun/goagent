@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -23,7 +21,6 @@ type Message struct {
 // ChatLLM 抽象,便于测试注入 mock。
 type ChatLLM interface {
 	Chat(ctx context.Context, messages []Message) (Message, error)
-	StreamChat(ctx context.Context, messages []Message, onDelta func(string)) error
 }
 
 type LLMClient struct {
@@ -78,44 +75,4 @@ func (c *LLMClient) Chat(ctx context.Context, messages []Message) (Message, erro
 		return Message{}, fmt.Errorf("没有 choices")
 	}
 	return out.Choices[0].Message, nil
-}
-
-func (c *LLMClient) StreamChat(ctx context.Context, messages []Message, onDelta func(string)) error {
-	body, _ := json.Marshal(map[string]any{"model": c.Model, "messages": messages, "stream": true})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/completions", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.APIKey)
-	resp, err := c.HTTP.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "[DONE]" {
-			return nil
-		}
-		var chunk struct {
-			Choices []struct {
-				Delta struct {
-					Content string `json:"content"`
-				} `json:"delta"`
-			} `json:"choices"`
-		}
-		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-			return err
-		}
-		if len(chunk.Choices) > 0 {
-			onDelta(chunk.Choices[0].Delta.Content)
-		}
-	}
-	return scanner.Err()
 }

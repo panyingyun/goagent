@@ -1,4 +1,4 @@
-// 课时2:MCP 客户端(Client)
+// 课时16:MCP 客户端(Client)
 //
 // 客户端把 MCP 服务器当作子进程启动,通过 stdio 用 JSON-RPC 通信,
 // 完成三步:initialize 握手 -> tools/list 看有哪些工具 -> tools/call 调用工具。
@@ -121,7 +121,7 @@ func StartMCPClient(ctx context.Context, binary string) (*MCPClient, error) {
 	if _, err := c.call(ctx, "initialize", map[string]any{
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{},
-		"clientInfo":      map[string]any{"name": "ch02-client", "version": "0.1.0"},
+		"clientInfo":      map[string]any{"name": "ch16-client", "version": "0.1.0"},
 	}); err != nil {
 		c.Close()
 		return nil, err
