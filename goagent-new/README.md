@@ -38,6 +38,7 @@
 | [ch11](ch11-observability/) | 可观测与成本 | trace、usage、延迟和预算 |
 | [ch12](ch12-deployment/) | 部署 | 认证、限流、超时、健康检查 |
 | [ch13](ch13-capstone/) | 综合项目 | 可运行的 Workspace Agent |
+| [ch14](mathai/) | Web 综合案例 | MathAI 前后端、Graph 工具、trace 与 Docker |
 
 附录位于 [appendices](appendices/)：文本 ReAct、MCP、Skill、多 Agent，以及框架概念映射。附录不是核心主线的前置条件。
 
@@ -75,7 +76,8 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/v1/chat `
 
 ```text
 goagent-new/
-├── ch00-...ch13/       # 每章讲义、验收标准与练习
+├── ch00-...ch13/       # 主线课程讲义、验收标准与练习
+├── mathai/             # ch14 Web 综合案例
 ├── appendices/         # 非主线生态知识
 ├── cmd/
 │   ├── workspace-agent # 贯穿项目 CLI
@@ -100,4 +102,3 @@ goagent-new/
 - 提示词不是安全边界，真正的边界必须在代码、权限和隔离层；
 - 没有评估集和 trace 的 Agent，不应声称“已经优化”；
 - 示例可以最小，但不能用错误的安全模式换取代码短小。
-

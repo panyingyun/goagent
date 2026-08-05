@@ -1,0 +1,20 @@
+services:
+  mathai:
+    build:
+      context: ..
+      dockerfile: mathai/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - mathai-data:/app/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  mathai-data:

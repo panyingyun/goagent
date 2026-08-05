@@ -1,0 +1,20 @@
+[
+  {
+    "id": "compare-line-parabola",
+    "message": "画出 y=x 和 y=x^2，并比较交点",
+    "expectedOperations": ["replace_equations"],
+    "expectedExpressions": ["x", "x^2"]
+  },
+  {
+    "id": "trigonometric-viewport",
+    "message": "画 sin(x) 和 cos(x)，把 x 轴范围设置到 -2*pi 到 2*pi",
+    "expectedOperations": ["replace_equations", "set_viewport"],
+    "expectedExpressions": ["sin(x)", "cos(x)"]
+  },
+  {
+    "id": "clear-graph",
+    "message": "清空当前图形",
+    "expectedOperations": ["clear_graph"],
+    "expectedEquationCount": 0
+  }
+]
