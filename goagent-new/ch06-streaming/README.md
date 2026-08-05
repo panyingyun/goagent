@@ -2,6 +2,18 @@
 
 目标：流式不是逐字打印，而是一条从浏览器断开一直传播到模型请求和工具进程的取消链。
 
+## 运行与代码
+
+```powershell
+go run ./ch06-streaming
+Invoke-WebRequest "http://localhost:8080/stream?q=hello"
+go test ./ch06-streaming -v
+```
+
+- [`main.go`](main.go)：可取消的事件生产者和 SSE 服务；
+- [`main_test.go`](main_test.go)：读取到 done，而不是只读第一个网络分片；
+- [`pkg/stream/sse.go`](../pkg/stream/sse.go)：共享 SSE relay。
+
 ## 必学
 
 - 上游模型流与下游 SSE/ReadableStream 的转换；

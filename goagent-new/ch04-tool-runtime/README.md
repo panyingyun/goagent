@@ -2,6 +2,18 @@
 
 目标：工具能力越强，边界越明确。
 
+## 运行与代码
+
+```powershell
+go run ./ch04-tool-runtime
+go run ./ch04-tool-runtime -approve
+go test ./ch04-tool-runtime -v
+```
+
+- [`main.go`](main.go)：对比未批准和批准后的写工具；
+- [`main_test.go`](main_test.go)：验证审批与进程内幂等去重；
+- [`pkg/agent/executor.go`](../pkg/agent/executor.go)：共享工具运行时。
+
 每个 `agent.Tool` 显式声明：
 
 - `SideEffect`：none/read/write/external；

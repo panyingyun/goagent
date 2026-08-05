@@ -2,7 +2,19 @@
 
 目标：部署的是前面构建的 Agent，而不是返回“已收到”的占位接口。
 
-[`cmd/workspace-server`](../cmd/workspace-server/) 包含：
+## 运行与代码
+
+```powershell
+$env:AGENT_API_TOKEN = "local-token"
+go run ./ch12-deployment
+go test ./ch12-deployment -v
+```
+
+- [`server.go`](server.go)：认证、严格请求、大小限制、超时与探针；
+- [`main.go`](main.go)：真实 Workspace Agent、HTTP Server 和优雅关闭；
+- [`server_test.go`](server_test.go)：401、未知字段、真实服务调用和 503 readiness。
+
+本章实现及最终版 [`cmd/workspace-server`](../cmd/workspace-server/) 包含：
 
 - Bearer token 认证；
 - 请求方法和 Content-Type 检查；
@@ -15,4 +27,3 @@
 - 真实调用 `agent.Runner`。
 
 生产还应在可信反向代理后终止 TLS，并使用集中式身份、密钥、日志和限流服务。
-

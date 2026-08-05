@@ -2,6 +2,17 @@
 
 目标：建立威胁模型，而不是背提示注入关键词。
 
+## 运行与代码
+
+```powershell
+go run ./ch09-security -host example.com https://example.com
+go test ./ch09-security -v
+```
+
+- [`policy.go`](policy.go)：HTTPS allowlist、解析后 IP 检查和固定 argv 命令；
+- [`policy_test.go`](policy_test.go)：SSRF、凭据、私网 IP 和 Shell 文本测试；
+- [`main.go`](main.go)：策略演示入口。
+
 ## 信任边界
 
 - 用户输入不可信；
@@ -20,4 +31,3 @@
 - 为每个主体执行认证、授权、审计和配额。
 
 [`pkg/agent/safe_tools.go`](../pkg/agent/safe_tools.go) 展示不经过 Shell 的安全工具模式。
-

@@ -1,5 +1,19 @@
 # ch13：综合项目——Workspace Agent
 
+## 运行与代码
+
+```powershell
+go run ./ch13-capstone "列出工作区文档"
+go run ./ch13-capstone -approve-write "把 2+3 的结果写到 result.txt"
+go test ./ch13-capstone -v
+```
+
+- [`main.go`](main.go)：一次性任务、写审批和 trace 输出；
+- [`main_test.go`](main_test.go)：离线 scripted LLM 综合测试；
+- [`pkg/workspace/app.go`](../pkg/workspace/app.go)：共享综合应用；
+- [`cmd/workspace-agent`](../cmd/workspace-agent/)：交互式最终 CLI；
+- [`cmd/workspace-server`](../cmd/workspace-server/)：最终 HTTP 服务。
+
 Workspace Agent 能安全地：
 
 - 列出 `testdata/workspace` 中的文档；
@@ -24,4 +38,3 @@ Workspace Agent 能安全地：
 ## 下一步
 
 在完成基线评估后，再选择性加入 MCP、真实 embedding、流式 Web UI 或多 Agent。不要为了使用名词而增加架构。
-

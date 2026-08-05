@@ -2,6 +2,17 @@
 
 目标：把模型当成一个不稳定、有限额、会返回非确定结果的远程依赖，而不是魔法函数。
 
+## 运行与代码
+
+```powershell
+go run ./ch01-llm-api "用一句话介绍 Agent"
+go test ./ch01-llm-api -v
+```
+
+- [`main.go`](main.go)：组装消息、调用可配置客户端并打印 usage；
+- [`main_test.go`](main_test.go)：用 fake LLM 验证消息契约；
+- [`pkg/llm/client.go`](../pkg/llm/client.go)：HTTP、错误分类、响应体限制和 context 实现。
+
 ## 学习内容
 
 - system/user/assistant/tool 消息；
@@ -20,4 +31,3 @@
 ## 练习
 
 用 `httptest.Server` 分别模拟 200、429、500、慢响应和损坏 JSON，验证客户端错误分类。
-
