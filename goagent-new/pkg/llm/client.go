@@ -1,0 +1,112 @@
+package llm
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+)
+
+const maxResponseBytes = 4 << 20
+
+type HTTPClient struct {
+	APIKey  string
+	BaseURL string
+	Model   string
+	HTTP    *http.Client
+}
+
+func NewHTTPClient(apiKey, baseURL, model string) *HTTPClient {
+	return &HTTPClient{
+		APIKey:  apiKey,
+		BaseURL: strings.TrimRight(baseURL, "/"),
+		Model:   model,
+		HTTP:    &http.Client{Timeout: 90 * time.Second},
+	}
+}
+
+type HTTPError struct {
+	StatusCode int
+	Body       string
+	RequestID  string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("llm http status %d (request_id=%q): %s", e.StatusCode, e.RequestID, e.Body)
+}
+
+func (e *HTTPError) Retryable() bool {
+	return e.StatusCode == http.StatusTooManyRequests || e.StatusCode >= 500
+}
+
+func (c *HTTPClient) Complete(ctx context.Context, in Request) (Response, error) {
+	if c.APIKey == "" || c.BaseURL == "" || c.Model == "" {
+		return Response{}, errors.New("LLM_API_KEY、LLM_BASE_URL 和 LLM_MODEL 必须配置")
+	}
+	payload := struct {
+		Model       string           `json:"model"`
+		Messages    []Message        `json:"messages"`
+		Tools       []ToolDefinition `json:"tools,omitempty"`
+		Temperature *float64         `json:"temperature,omitempty"`
+		Stream      bool             `json:"stream"`
+	}{c.Model, in.Messages, in.Tools, in.Temperature, false}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return Response{}, fmt.Errorf("encode llm request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return Response{}, fmt.Errorf("build llm request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return Response{}, fmt.Errorf("send llm request: %w", err)
+	}
+	defer resp.Body.Close()
+	requestID := resp.Header.Get("X-Request-Id")
+	limited := io.LimitReader(resp.Body, maxResponseBytes+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return Response{}, fmt.Errorf("read llm response: %w", err)
+	}
+	if len(data) > maxResponseBytes {
+		return Response{}, errors.New("llm response exceeds 4 MiB limit")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return Response{}, &HTTPError{StatusCode: resp.StatusCode, Body: truncate(string(data), 1000), RequestID: requestID}
+	}
+	var decoded struct {
+		Choices []struct {
+			Message      Message `json:"message"`
+			FinishReason string  `json:"finish_reason"`
+		} `json:"choices"`
+		Usage Usage `json:"usage"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return Response{}, fmt.Errorf("decode llm response: %w", err)
+	}
+	if len(decoded.Choices) == 0 {
+		return Response{}, errors.New("llm response contains no choices")
+	}
+	return Response{
+		Message:      decoded.Choices[0].Message,
+		FinishReason: decoded.Choices[0].FinishReason,
+		Usage:        decoded.Usage,
+		RequestID:    requestID,
+	}, nil
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}
+
