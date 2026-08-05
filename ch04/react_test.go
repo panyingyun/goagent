@@ -206,7 +206,7 @@ func TestMCPClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(text, "hello mcp") {
+	if !strings.Contains(text, "HELLO MCP") {
 		t.Fatalf("echo 结果不符: %q", text)
 	}
 
@@ -238,7 +238,7 @@ func TestMCPToolRegistered(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(got, "hi") {
+	if !strings.Contains(got, "HI") {
 		t.Fatalf("MCP 工具结果不符: %q", got)
 	}
 }
