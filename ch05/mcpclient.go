@@ -186,12 +186,18 @@ func (c *MCPClient) Close() {
 func registerMCPTool(r *Registry, mcp *MCPClient) {
 	r.Register(Tool{
 		Name:        "mcp",
-		Description: `通过 MCP 协议调用外部工具服务器上的工具。输入: {"tool": "工具名", "arguments": {参数对象}}`,
+		Description: `通过 MCP 协议调用外部工具服务器上的工具。输入格式: {"tool": "工具名", "arguments": {参数对象}}。当前服务器可用工具: echo(参数 {"text": "要回显的字符串"})、get_time(无参数,arguments 可传 {})。`,
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"tool":      map[string]any{"type": "string", "description": "MCP 服务器上要调用的工具名"},
-				"arguments": map[string]any{"type": "object", "description": "传给该工具的参数对象"},
+				"tool": map[string]any{
+					"type":        "string",
+					"description": "MCP 服务器上要调用的工具名,例如 echo 或 get_time",
+				},
+				"arguments": map[string]any{
+					"type":        "object",
+					"description": "传给该工具的参数。echo 必须用 {\"text\": \"...\"},不要用 content/message 等其它键名;get_time 传 {}",
+				},
 			},
 			"required": []string{"tool"},
 		},

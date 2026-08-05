@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -126,7 +127,7 @@ func callTool(p callParams) (string, error) {
 	switch p.Name {
 	case "echo":
 		text, _ := p.Arguments["text"].(string)
-		return "echo: " + text, nil
+		return "echo: " + strings.ToUpper(text), nil
 	case "get_time":
 		return time.Now().Format("2006-01-02 15:04:05"), nil
 	default:
