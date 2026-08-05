@@ -39,6 +39,13 @@
 | [ch12](ch12-deployment/) | 部署 | 认证、限流、超时、健康检查 |
 | [ch13](ch13-capstone/) | 综合项目 | 可运行的 Workspace Agent |
 | [ch14](mathai/) | Web 综合案例 | MathAI 前后端、Graph 工具、trace 与 Docker |
+| [ch15](ch15-harness-engineering/) | Harness Engineering | 能力清单、任务预算、无进展检测与统一验收 |
+| [ch16](ch16-context-engineering/) | Context Engineering | 可信来源、相关性选择与上下文预算 |
+| [ch17](ch17-agent-learning/) | Agent Learning Loop | 经验、证据、回归门禁、晋级与检索 |
+| [ch18](ch18-graph-engineering/) | Graph Engineering | 节点、边、条件、循环和拓扑验证 |
+| [ch19](ch19-durable-graph/) | Durable Graph | Checkpoint、Event Log、恢复和状态迁移 |
+| [ch20](ch20-system-evaluation/) | 系统评估 | 路径、状态、预算、故障注入和版本比较 |
+| [ch21](ch21-repopilot/) | 高级综合项目 | 可审批、可恢复、可学习的 RepoPilot |
 
 附录位于 [appendices](appendices/)：文本 ReAct、MCP、Skill、多 Agent，以及框架概念映射。附录不是核心主线的前置条件。
 
@@ -78,18 +85,28 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/v1/chat `
 goagent-new/
 ├── ch00-...ch13/       # 主线课程讲义、验收标准与练习
 ├── mathai/             # ch14 Web 综合案例
+├── ch15-...ch21/       # Harness、学习闭环、执行图与 RepoPilot
 ├── appendices/         # 非主线生态知识
 ├── cmd/
 │   ├── workspace-agent # 贯穿项目 CLI
 │   └── workspace-server# 真实 Agent HTTP 服务
 ├── pkg/
 │   ├── llm             # 可替换 LLM 客户端
+│   ├── structured      # 严格结构化输出解码与校验
 │   ├── agent           # Agent 循环与工具运行时
-│   ├── memory          # 状态和持久化偏好
-│   ├── eval            # 评估器
-│   ├── workflow        # 可恢复工作流
+│   ├── harness         # 任务能力、预算、Worker 与最终验收
+│   ├── contextkit      # 可信来源、相关性和上下文预算装配
+│   ├── memory          # 用户偏好与长期记忆
+│   ├── learning        # 经验候选、验证、晋级、退役与检索
 │   ├── retrieval       # RAG 基线与评估
-│   └── trace           # 追踪与 usage
+│   ├── workflow        # 线性可恢复工作流与 HITL
+│   ├── graph           # 节点、条件边、循环和执行图引擎
+│   ├── graphstore      # Graph Checkpoint、Event Log 与状态迁移
+│   ├── stream          # SSE 流式响应、取消与背压
+│   ├── eval            # 基础任务与工具轨迹评估
+│   ├── systemeval      # Graph/Harness 路径、状态、预算与回归评估
+│   ├── trace           # Agent 追踪、事件、耗时与 usage
+│   └── workspace       # Workspace Agent 的安全工具和应用组装
 └── testdata/           # 课程文档与评估集
 ```
 
