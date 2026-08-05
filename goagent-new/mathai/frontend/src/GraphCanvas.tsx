@@ -38,6 +38,12 @@ function drawGraph(context: CanvasRenderingContext2D, width: number, height: num
   context.clearRect(0, 0, width, height);
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, width, height);
+  // Warm paper wash to match the pigo-inspired shell.
+  const wash = context.createLinearGradient(0, 0, width, height);
+  wash.addColorStop(0, "rgba(193, 95, 60, 0.025)");
+  wash.addColorStop(1, "rgba(38, 37, 30, 0.02)");
+  context.fillStyle = wash;
+  context.fillRect(0, 0, width, height);
 
   if (settings.showGrid) drawGrid(context, width, height, viewport, toX, toY);
   if (settings.showAxes) drawAxes(context, width, height, viewport, toX, toY);
@@ -70,10 +76,10 @@ function drawGraph(context: CanvasRenderingContext2D, width: number, height: num
 }
 
 function drawGrid(context: CanvasRenderingContext2D, width: number, height: number, viewport: GraphState["viewport"], toX: (x: number) => number, toY: (y: number) => number) {
-  context.strokeStyle = "#e8edf5";
+  context.strokeStyle = "#ebe6e0";
   context.lineWidth = 1;
-  context.fillStyle = "#8190a8";
-  context.font = "11px system-ui";
+  context.fillStyle = "#8a857c";
+  context.font = '11px Inter, LXGWWenKai, "PingFang SC", system-ui, sans-serif';
   const xStep = niceStep(viewport.xMax - viewport.xMin);
   const yStep = niceStep(viewport.yMax - viewport.yMin);
   for (let x = Math.ceil(viewport.xMin / xStep) * xStep; x <= viewport.xMax; x += xStep) {
@@ -89,7 +95,7 @@ function drawGrid(context: CanvasRenderingContext2D, width: number, height: numb
 }
 
 function drawAxes(context: CanvasRenderingContext2D, width: number, height: number, viewport: GraphState["viewport"], toX: (x: number) => number, toY: (y: number) => number) {
-  context.strokeStyle = "#526077";
+  context.strokeStyle = "#504f49";
   context.lineWidth = 1.4;
   context.beginPath();
   if (viewport.yMin <= 0 && viewport.yMax >= 0) { context.moveTo(0, toY(0)); context.lineTo(width, toY(0)); }
