@@ -166,7 +166,7 @@ func (s *Store) persistLocked() error {
 }
 
 func cloneSession(session Session) Session {
-	session.Messages = append([]Message(nil), session.Messages...)
+	session.Messages = append(make([]Message, 0, len(session.Messages)), session.Messages...)
 	session.GraphState = cloneGraphState(session.GraphState)
 	return session
 }

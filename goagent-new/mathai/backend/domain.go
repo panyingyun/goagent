@@ -281,10 +281,10 @@ func equationIndex(equations []Equation, id string) int {
 }
 
 func cloneGraphState(state GraphState) GraphState {
-	state.Equations = append([]Equation(nil), state.Equations...)
+	state.Equations = append(make([]Equation, 0, len(state.Equations)), state.Equations...)
 	if state.Analysis != nil {
 		analysis := *state.Analysis
-		analysis.Highlights = append([]string(nil), state.Analysis.Highlights...)
+		analysis.Highlights = append(make([]string, 0, len(state.Analysis.Highlights)), state.Analysis.Highlights...)
 		state.Analysis = &analysis
 	}
 	return state

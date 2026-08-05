@@ -42,7 +42,7 @@ function drawGraph(context: CanvasRenderingContext2D, width: number, height: num
   if (settings.showGrid) drawGrid(context, width, height, viewport, toX, toY);
   if (settings.showAxes) drawAxes(context, width, height, viewport, toX, toY);
 
-  for (const equation of graph.equations.filter((item) => item.visible)) {
+  for (const equation of (graph.equations ?? []).filter((item) => item.visible)) {
     try {
       const evaluator = compile(equation.expression);
       context.beginPath();

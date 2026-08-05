@@ -95,8 +95,8 @@ export default function App() {
         <section className="chat-panel">
           <div className="panel-heading"><div><span className="eyebrow">CONVERSATION</span><h1>{session?.title ?? "载入中…"}</h1></div></div>
           <div className="messages">
-            {!session?.messages.length && <div className="welcome"><span>ƒ(x)</span><h2>告诉我你想探索的函数</h2><p>MathAI 会通过受控工具更新图形，并解释关键数学特征。</p><div className="example-grid">{examples.map((example) => <button key={example} onClick={() => setMessage(example)}>{example}</button>)}</div></div>}
-            {session?.messages.map((item) => <article key={item.id} className={`message ${item.role}`}><div className="avatar">{item.role === "user" ? "你" : "∫"}</div><div><p>{item.content}</p>{item.traceId && <button className="trace-link" onClick={() => openTrace(item.traceId!)}>查看执行轨迹 →</button>}</div></article>)}
+            {!session?.messages?.length && <div className="welcome"><span>ƒ(x)</span><h2>告诉我你想探索的函数</h2><p>MathAI 会通过受控工具更新图形，并解释相关数学特征。</p><div className="example-grid">{examples.map((example) => <button key={example} onClick={() => setMessage(example)}>{example}</button>)}</div></div>}
+            {session?.messages?.map((item) => <article key={item.id} className={`message ${item.role}`}><div className="avatar">{item.role === "user" ? "你" : "∫"}</div><div><p>{item.content}</p>{item.traceId && <button className="trace-link" onClick={() => openTrace(item.traceId!)}>查看执行轨迹 →</button>}</div></article>)}
             {busy && <article className="message assistant"><div className="avatar">∫</div><div className="thinking"><i /><i /><i /></div></article>}
           </div>
           {error && <div className="error-banner">{error}<button onClick={() => setError("")}>×</button></div>}
@@ -106,14 +106,14 @@ export default function App() {
         <section className="graph-panel">
           <div className="panel-heading"><div><span className="eyebrow">LIVE CANVAS</span><h2>函数图像</h2></div>{graph && <span className="viewport-badge">x [{graph.viewport.xMin}, {graph.viewport.xMax}] · y [{graph.viewport.yMin}, {graph.viewport.yMax}]</span>}</div>
           <div className="canvas-wrap">{graph ? <GraphCanvas graph={graph} /> : <div className="canvas-placeholder">正在准备画布…</div>}</div>
-          {graph?.settings.showLegend && <div className="legend">{graph.equations.map((equation) => <span className={equation.visible ? "" : "muted"} key={equation.id}><i style={{ background: equation.color }} />{equation.label}</span>)}</div>}
+          {graph?.settings.showLegend && <div className="legend">{(graph.equations ?? []).map((equation) => <span className={equation.visible ? "" : "muted"} key={equation.id}><i style={{ background: equation.color }} />{equation.label}</span>)}</div>}
         </section>
 
         <aside className="inspector">
           <div className="panel-heading"><div><span className="eyebrow">STATE</span><h2>图形状态</h2></div><span className="version">v{session?.version ?? 0}</span></div>
-          <section><h3>函数</h3>{graph?.equations.length ? graph.equations.map((equation) => <div className="equation-card" key={equation.id}><i style={{ background: equation.color }} /><div><strong>{equation.label}</strong><code>{equation.expression}</code></div><span>{equation.visible ? "显示" : "隐藏"}</span></div>) : <p className="empty-copy">尚未添加函数</p>}</section>
+          <section><h3>函数</h3>{graph?.equations?.length ? graph.equations.map((equation) => <div className="equation-card" key={equation.id}><i style={{ background: equation.color }} /><div><strong>{equation.label}</strong><code>{equation.expression}</code></div><span>{equation.visible ? "显示" : "隐藏"}</span></div>) : <p className="empty-copy">尚未添加函数</p>}</section>
           <section><h3>渲染</h3><dl><div><dt>采样点</dt><dd>{graph?.settings.sampleCount ?? "—"}</dd></div><div><dt>网格</dt><dd>{graph?.settings.showGrid ? "开启" : "关闭"}</dd></div><div><dt>坐标轴</dt><dd>{graph?.settings.showAxes ? "开启" : "关闭"}</dd></div></dl></section>
-          {graph?.analysis && <section><h3>Agent 分析</h3><p className="analysis-copy">{graph.analysis.summary}</p><ul>{graph.analysis.highlights.map((item) => <li key={item}>{item}</li>)}</ul></section>}
+          {graph?.analysis && <section><h3>Agent 分析</h3><p className="analysis-copy">{graph.analysis.summary}</p><ul>{(graph.analysis.highlights ?? []).map((item) => <li key={item}>{item}</li>)}</ul></section>}
           {trace && <section className="trace-card"><h3>执行轨迹</h3><small>{trace.id}</small>{eventSummary.map((item, index) => <p key={`${item}-${index}`}>{item}</p>)}</section>}
         </aside>
       </main>

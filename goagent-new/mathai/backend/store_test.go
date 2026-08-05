@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -44,5 +46,25 @@ func TestStorePersistsAndRejectsStaleCommit(t *testing.T) {
 	}
 	if loaded.Version != 2 || len(loaded.GraphState.Equations) != 1 {
 		t.Fatalf("unexpected persisted session: %+v", loaded)
+	}
+}
+
+func TestCloneSessionJSONUsesEmptyArrays(t *testing.T) {
+	t.Parallel()
+	store, err := OpenStore(filepath.Join(t.TempDir(), "sessions.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := store.Create("空会话")
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(payload)
+	if strings.Contains(text, `"messages":null`) || strings.Contains(text, `"equations":null`) {
+		t.Fatalf("empty slices must encode as [] not null: %s", text)
 	}
 }
