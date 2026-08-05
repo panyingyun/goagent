@@ -51,7 +51,7 @@ ch22–25 是生态对照,不是 Agent 新能力。
 | 1 | [ch01](ch01) | Go 调用 LLM(DeepSeek) | ✅ 已完成 · 必修 |
 | 2 | [ch02](ch02) | 提示词工程 | ✅ 已完成 · 必修 |
 | 3 | [ch03](ch03) | ReAct 文本协议循环 | ✅ 已完成 · 必修 |
-| 4 | [ch04](ch04) | 完整 Agent(ReAct + MCP + SKILL + FC) | 必修 |
+| 4 | [ch04](ch04) | 完整 Agent(ReAct + MCP + SKILL + FC) | ✅ 已完成 · 必修 |
 | 5 | [ch05](ch05) | SKILL 调用 | 必修 |
 | 6 | [ch06](ch06) | 多轮对话与记忆 | 必修 |
 | 7 | [ch07](ch07) | 流式输出(SSE) | 必修 |
