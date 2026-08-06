@@ -43,7 +43,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => void addSession()}
-          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-on-surface py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
+          className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-on-primary shadow-soft transition hover:bg-primary-container"
         >
           <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             add
@@ -58,7 +58,7 @@ export function Sidebar() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索会话或方程"
-            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2.5 pl-10 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
       </div>
@@ -79,9 +79,9 @@ export function Sidebar() {
                       tabIndex={0}
                       onClick={() => void openSession(item.id)}
                       onKeyDown={(e) => e.key === 'Enter' && void openSession(item.id)}
-                      className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition ${
+                      className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 transition ${
                         active
-                          ? 'bg-white text-secondary shadow-sm ring-1 ring-secondary/20'
+                          ? 'bg-primary-container text-on-primary-container shadow-soft'
                           : 'text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
                       }`}
                     >
@@ -90,7 +90,9 @@ export function Sidebar() {
                       <button
                         type="button"
                         title="删除"
-                        className="rounded p-0.5 opacity-0 transition group-hover:opacity-100 hover:text-error"
+                        className={`rounded p-0.5 opacity-0 transition group-hover:opacity-100 ${
+                          active ? 'hover:bg-white/10' : 'hover:text-error'
+                        }`}
                         onClick={(e) => {
                           e.stopPropagation()
                           if (confirm('删除该会话？')) void removeSession(item.id)
@@ -110,8 +112,8 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="space-y-2 border-t border-outline-variant p-4">
-        <label className="block text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">
+      <div className="space-y-1 border-t border-outline-variant p-3">
+        <label className="mb-1 block px-2 text-[11px] font-medium uppercase tracking-wider text-on-surface-variant">
           API Token（可选）
         </label>
         <input
@@ -120,12 +122,16 @@ export function Sidebar() {
           placeholder="与服务端配置一致"
           onChange={(e) => setToken(e.target.value)}
           onBlur={() => void refresh()}
-          className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:border-primary"
+          className="mb-2 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:border-primary"
         />
-        <div className="flex items-center gap-2 pt-1 text-sm text-on-surface-variant">
+        <a className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface">
           <span className="material-symbols-outlined text-[18px]">cloud_done</span>
           自动保存
-        </div>
+        </a>
+        <a className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface">
+          <span className="material-symbols-outlined text-[18px]">help</span>
+          使用帮助
+        </a>
       </div>
     </aside>
   )

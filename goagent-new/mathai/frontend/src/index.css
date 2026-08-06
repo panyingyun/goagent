@@ -25,3 +25,72 @@ body {
   background: #c3c6d7;
   border-radius: 999px;
 }
+
+.typing-indicator span {
+  animation: blink 1.4s infinite both;
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background-color: #737686;
+  display: inline-block;
+  margin: 0 2px;
+}
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.loader {
+  border: 3px solid #e1e2ed;
+  border-top-color: #004ac6;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.math-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, #e1e2ed 1px, transparent 1px),
+    linear-gradient(to bottom, #e1e2ed 1px, transparent 1px);
+  background-position: center center;
+}
+.math-axes::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #737686;
+  transform: translateY(-50%);
+}
+.math-axes::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #737686;
+  transform: translateX(-50%);
+}
