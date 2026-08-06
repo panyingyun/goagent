@@ -4,8 +4,9 @@
 // 启动时把 skills/*.md 读进来,拼进 system 消息,模型就会遵守其中的规范。
 //
 // 运行(已配置好 DEEPSEEK_API_KEY):
-//   go run . "12 * 8 + 4 等于多少?"
-//   go run . "把 Hello world 翻译成中文"
+//
+//	go run . "12 * 8 + 4 等于多少?"
+//	go run . "把 Hello world 翻译成中文"
 package main
 
 import (
@@ -54,6 +55,9 @@ func main() {
 
 	// 1. 加载 skills/ 目录下的所有技能
 	skills, err := loadSkills("skills")
+
+	//fmt.Printf("[YYPAN]  skills = [[[\n   %v   \n]]]\n", skills)
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "加载技能失败:", err)
 		os.Exit(1)
