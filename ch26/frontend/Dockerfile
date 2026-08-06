@@ -1,6 +1,8 @@
 # 前端:Node 构建 dist -> 用 vite preview 托管(代理 /api 到后端容器)
 FROM node:20-alpine AS build
 WORKDIR /app
+# 国内构建默认走 npmmirror,避免 registry.npmjs.org 超时
+RUN npm config set registry https://registry.npmmirror.com
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
@@ -8,6 +10,7 @@ RUN npm run build
 
 FROM node:20-alpine
 WORKDIR /app
+RUN npm config set registry https://registry.npmmirror.com
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json ./

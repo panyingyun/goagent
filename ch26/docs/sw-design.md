@@ -51,18 +51,13 @@ Zustand 或 Redux Toolkit 用于状态管理，优先 Zustand
 ## 后端
 
 ```text
-Python
-FastAPI
-Pydantic
-Uvicorn
-httpx / requests
+Go
 ```
 
 ## 数据库
 
 ```text
-SQLite
-SQLAlchemy 或 SQLModel
+sqlite
 ```
 
 ## AI 接口
