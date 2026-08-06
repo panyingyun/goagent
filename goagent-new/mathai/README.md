@@ -16,7 +16,7 @@ MathAI 是 `goagent-new` 主线之后的第一个完整 Web 案例：用户用�
 ```text
 mathai/
 ├── backend/              # Go API、Agent、领域模型、存储和测试
-├── frontend/             # React + TypeScript + Canvas 前端
+├── frontend/             # React + TypeScript + Tailwind + Plotly 三栏工作台
 ├── docs/                 # 架构、API、安全、部署、评估和学习指南
 ├── testdata/             # 离线评估案例
 ├── Dockerfile
@@ -75,7 +75,7 @@ docker compose up --build
 2. 阅读 `backend/domain.go`，观察模型输出为什么必须再次经过确定性校验；
 3. 阅读 `backend/math_agent.go`，理解读工具、写工具、审批与 trace 如何组合；
 4. 运行后端测试，用 scripted LLM 验证 Agent，而不消耗真实 API；
-5. 阅读前端 `GraphCanvas.tsx`，理解表达式计算为什么不使用 `eval`；
+5. 阅读前端 `components/GraphViewer.tsx` 与 `plot.ts`，理解表达式计算为什么不使用 `eval`；
 6. 最后阅读部署与安全文档，完成验收场景。
 
 ## 验收场景

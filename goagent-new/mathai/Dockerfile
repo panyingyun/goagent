@@ -1,6 +1,8 @@
 # Build context must be the goagent-new directory.
 FROM node:22-alpine AS frontend-builder
 WORKDIR /src/frontend
+# 国内构建默认走 npmmirror,避免 registry.npmjs.org 超时
+RUN npm config set registry https://registry.npmmirror.com
 COPY mathai/frontend/package.json ./
 RUN npm install --ignore-scripts --no-audit --no-fund
 COPY mathai/frontend/ ./
@@ -8,6 +10,8 @@ RUN npm run build
 
 FROM golang:1.25-alpine AS backend-builder
 WORKDIR /src
+# 国内构建默认走 goproxy.cn,避免 proxy.golang.org 超时
+ENV GOPROXY=https://goproxy.cn,direct
 COPY go.mod ./
 COPY pkg/ ./pkg/
 COPY mathai/backend/ ./mathai/backend/
