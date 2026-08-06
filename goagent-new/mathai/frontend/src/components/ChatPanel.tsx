@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { Activity, LineChart, MoreHorizontal, Paperclip, SendHorizontal, Waves } from 'lucide-react'
+import { BrandLogo } from './BrandLogo'
 import { useStore } from '../store'
 
 const QUICK = [
-  { icon: 'show_chart', label: '画一条抛物线', prompt: '画一条抛物线 y = x^2，并解释图像特征' },
-  { icon: 'waves', label: '比较正弦与余弦', prompt: '比较 y = sin(x) 和 y = cos(x)' },
-  { icon: 'straighten', label: '绘制 y = 2x + 1', prompt: '绘制 y = 2x + 1' },
+  { icon: LineChart, label: '画一条抛物线', prompt: '画一条抛物线 y = x^2，并解释图像特征' },
+  { icon: Waves, label: '比较正弦与余弦', prompt: '比较 y = sin(x) 和 y = cos(x)' },
+  { icon: Activity, label: '绘制 y = 2x + 1', prompt: '绘制 y = 2x + 1' },
 ] as const
 
 export function ChatPanel() {
@@ -31,39 +33,55 @@ export function ChatPanel() {
   const empty = !session || session.messages.length === 0
 
   return (
-    <main className="relative flex min-w-0 flex-[2] flex-col border-r border-outline-variant bg-surface-bright">
-      <div className="flex h-14 shrink-0 items-center border-b border-outline-variant bg-surface-container-lowest/80 px-6 backdrop-blur-sm">
-        <h2 className="text-sm font-medium text-on-surface">{empty ? '新会话' : 'AI 对话'}</h2>
-        {!empty && session?.graphState?.equations?.[0] && (
-          <span className="ml-2 truncate font-mono text-xs text-on-surface-variant">
-            · {session.graphState.equations.map((e) => e.label || e.expression).join(' · ')}
-          </span>
+    <main className="relative flex min-w-0 flex-[2] flex-col border-r border-outline bg-surface">
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-outline bg-white/80 px-5 backdrop-blur-sm">
+        <div className="min-w-0 flex-1">
+          {empty ? (
+            <h2 className="text-sm font-medium text-ink">新会话</h2>
+          ) : (
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h2 className="shrink-0 text-sm font-medium text-ink">AI 对话</h2>
+              <span className="truncate text-sm text-muted">{session?.title}</span>
+            </div>
+          )}
+        </div>
+        {!empty && (
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-faint transition hover:bg-surface-low hover:text-ink"
+            title="更多"
+          >
+            <MoreHorizontal className="h-4 w-4" strokeWidth={1.75} />
+          </button>
         )}
       </div>
 
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
         {empty ? (
           <div className="flex h-full flex-col items-center justify-center px-6 py-10">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-primary-container shadow-soft">
-              <img src="/logo.png" alt="" className="h-12 w-12 object-contain" />
+            <div className="mb-6">
+              <BrandLogo size={56} withWordmark={false} />
             </div>
-            <h1 className="mb-8 max-w-md text-center text-[32px] font-semibold leading-10 tracking-tight text-on-surface">
+            <h1 className="mb-8 max-w-md text-center font-display text-[32px] font-medium leading-10 tracking-tight text-ink">
               你想绘制什么数学图像？
             </h1>
             <div className="flex w-full max-w-sm flex-col gap-3">
-              {QUICK.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => send(item.prompt)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-left transition hover:border-primary hover:bg-surface-container-low"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-container text-on-surface-variant transition group-hover:bg-primary-container group-hover:text-on-primary-container">
-                    <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-                  </div>
-                  <span className="text-sm text-on-surface">{item.label}</span>
-                </button>
-              ))}
+              {QUICK.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => send(item.prompt)}
+                    className="group flex w-full items-center gap-3 rounded-xl border border-outline bg-white px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary-soft"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-low text-muted transition group-hover:bg-primary/10 group-hover:text-primary">
+                      <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    </div>
+                    <span className="text-sm text-ink">{item.label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         ) : (
@@ -71,28 +89,26 @@ export function ChatPanel() {
             {session.messages.map((m) =>
               m.role === 'user' ? (
                 <div key={m.id} className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm border border-primary/10 bg-user-bubble px-4 py-3 text-sm leading-6 text-on-surface shadow-soft">
+                  <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-user-bubble px-4 py-3 text-sm leading-6 text-ink shadow-soft">
                     <p className="whitespace-pre-wrap">{m.content}</p>
                   </div>
                 </div>
               ) : (
                 <div key={m.id} className="flex flex-col items-start gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-primary">
-                      <img src="/logo.png" alt="" className="h-5 w-5 object-contain brightness-0 invert" />
-                    </div>
-                    <span className="text-xs font-medium text-on-surface-variant">MathGraph AI</span>
-                    <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                    <BrandLogo size={22} withWordmark={false} />
+                    <span className="text-xs font-medium text-ink">MathGraph AI</span>
+                    <span className="rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold tracking-wide text-primary">
                       DeepSeek
                     </span>
                   </div>
-                  <div className="max-w-[90%] space-y-3 rounded-2xl rounded-tl-sm border border-outline-variant bg-surface-container-lowest px-5 py-4 text-sm leading-6 shadow-soft">
+                  <div className="max-w-[90%] space-y-3 rounded-2xl rounded-tl-sm border border-outline bg-white px-5 py-4 text-sm leading-6 shadow-soft">
                     <p className="whitespace-pre-wrap">{m.content}</p>
                     {m.traceId && (
                       <button
                         type="button"
                         onClick={() => void openTrace(m.traceId!)}
-                        className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant transition hover:border-primary hover:text-primary"
+                        className="rounded-lg border border-outline px-3 py-1.5 text-xs text-muted transition hover:border-primary hover:text-primary"
                       >
                         查看执行轨迹
                       </button>
@@ -105,14 +121,14 @@ export function ChatPanel() {
             {busy && (
               <div className="flex flex-col items-start gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-on-primary">
-                    <span className="material-symbols-outlined text-[14px]">psychology</span>
-                  </div>
-                  <span className="text-xs font-medium text-on-surface-variant">MathGraph AI</span>
+                  <BrandLogo size={22} withWordmark={false} />
+                  <span className="text-xs font-medium text-ink">MathGraph AI</span>
                 </div>
-                <div className="rounded-2xl rounded-tl-sm border border-outline-variant bg-surface-container-low px-5 py-4">
+                <div className="rounded-2xl rounded-tl-sm border border-outline bg-surface-low px-5 py-4">
                   <div className="typing-indicator flex items-center gap-1">
-                    <span /><span /><span />
+                    <span />
+                    <span />
+                    <span />
                   </div>
                 </div>
               </div>
@@ -131,10 +147,10 @@ export function ChatPanel() {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-outline-variant bg-surface-container-lowest p-4">
-        <div className="relative flex items-end gap-2 rounded-2xl border border-outline-variant bg-surface-container-low p-2 transition focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
-          <button type="button" className="p-2 text-on-surface-variant transition hover:text-primary" title="快捷">
-            <span className="material-symbols-outlined">add_circle</span>
+      <div className="shrink-0 border-t border-outline bg-white p-4">
+        <div className="relative flex items-end gap-2 rounded-2xl border border-outline bg-surface-low p-2 transition focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30">
+          <button type="button" className="p-2 text-faint transition hover:text-primary" title="附件">
+            <Paperclip className="h-5 w-5" strokeWidth={1.75} />
           </button>
           <textarea
             value={input}
@@ -148,22 +164,20 @@ export function ChatPanel() {
                 send()
               }
             }}
-            className="max-h-32 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2 text-sm outline-none"
+            className="max-h-32 min-h-[40px] flex-1 resize-none border-0 bg-transparent py-2 text-sm outline-none placeholder:text-faint"
           />
           <button
             type="button"
             disabled={!input.trim() || busy}
             onClick={() => send()}
-            className="rounded-xl bg-primary p-2 text-on-primary shadow-soft transition hover:opacity-90 disabled:opacity-40"
+            className="rounded-xl bg-primary p-2.5 text-on-primary shadow-soft transition hover:bg-primary-container disabled:opacity-40"
             aria-label="发送"
           >
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-              send
-            </span>
+            <SendHorizontal className="h-4 w-4" strokeWidth={2} />
           </button>
         </div>
-        <p className="mt-2 text-center text-[12px] tracking-wide text-outline">
-          MathGraph AI 可以辅助数学可视化与分析 · Enter 发送
+        <p className="mt-2 text-center text-[12px] tracking-wide text-faint">
+          Enter 发送 · Shift + Enter 换行
         </p>
       </div>
     </main>

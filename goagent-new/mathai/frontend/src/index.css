@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #004ac6;
+  --primary-bright: #2563eb;
+  --primary-deep: #003ea8;
+  --cta: #004ac6;
+  --accent-soft: rgba(0, 74, 198, 0.1);
+  --surface: #faf8ff;
+  --surface-low: #f3f3fe;
+  --surface-mid: #ededf9;
+  --white: #fff;
+  --ink: #191b23;
+  --muted: #434655;
+  --faint: #737686;
+  --outline: #c3c6d7;
+  --danger: #ba1a1a;
+  --radius: 12px;
+  --font: 'Inter', 'LXGWWenKai', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui,
+    sans-serif;
+  --font-display: 'Newsreader', 'LXGWWenKai', Georgia, 'Times New Roman', 'PingFang SC', serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+
 html,
 body,
 #root {
@@ -10,12 +32,30 @@ body,
 }
 
 body {
-  @apply bg-background text-on-surface font-sans antialiased;
+  min-width: 320px;
+  overflow: hidden;
+  line-height: 1.6;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  user-select: none;
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.22;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -31,7 +71,7 @@ body {
   height: 6px;
   width: 6px;
   border-radius: 50%;
-  background-color: #737686;
+  background-color: var(--faint);
   display: inline-block;
   margin: 0 2px;
 }
@@ -55,7 +95,7 @@ body {
 
 .loader {
   border: 3px solid #e1e2ed;
-  border-top-color: #004ac6;
+  border-top-color: var(--primary);
   border-radius: 50%;
   width: 36px;
   height: 36px;
@@ -93,4 +133,34 @@ body {
   width: 2px;
   background-color: #737686;
   transform: translateX(-50%);
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: #c3c6d7;
+  transition: background 0.15s ease;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.toggle[data-on='true'] {
+  background: var(--primary);
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(25, 27, 35, 0.15);
+}
+.toggle[data-on='true']::after {
+  transform: translateX(18px);
 }
