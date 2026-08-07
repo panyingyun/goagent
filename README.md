@@ -114,4 +114,4 @@ ch01 → ch02 → ch03 → ch04 → ch05 → ch06 → ch07 → ch08 → ch09 →
 - Go 1.25+
 - `DEEPSEEK_API_KEY`(DeepSeek 开放平台申请)
 - 网络可访问 `https://api.deepseek.com`
-- 仅 ch19 额外需要 `OPENAI_API_KEY`(可跳过,用 ch09 学 RAG)
+- 仅 ch19 额外需要 `OPENAI_API_KEY`
