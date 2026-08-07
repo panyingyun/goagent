@@ -115,6 +115,7 @@ func registerDefaultTools(r *Registry) {
 		Name:        "read_file",
 		Description: "读取 docs 目录下的文本文件,返回内容。",
 		Run: func(_ context.Context, args map[string]any) (string, error) {
+			fmt.Println("[YYPAN] ========== read_file ==========")
 			name, _ := args["filename"].(string)
 			path, err := safePath(docRoot, name)
 			if err != nil {
@@ -131,6 +132,7 @@ func registerDefaultTools(r *Registry) {
 		Name:        "write_file",
 		Description: "把内容写入 docs 目录下的文件(覆盖)。",
 		Run: func(_ context.Context, args map[string]any) (string, error) {
+			fmt.Println("[YYPAN] ========== write_file ========== ")
 			name, _ := args["filename"].(string)
 			content, _ := args["content"].(string)
 			path, err := safePath(docRoot, name)
@@ -145,8 +147,9 @@ func registerDefaultTools(r *Registry) {
 	})
 	r.Register(Tool{
 		Name:        "run_command",
-		Description: "执行白名单内的命令,如 go version / echo <文本> / dir。",
+		Description: "执行白名单内的命令,如 go version / echo <文本> / dir / ls",
 		Run: func(ctx context.Context, args map[string]any) (string, error) {
+			fmt.Println("[YYPAN] ========== run_command ========== ")
 			cmd, _ := args["command"].(string)
 			cmd = strings.TrimSpace(cmd)
 			if !allowedCommand(cmd) {
@@ -212,7 +215,7 @@ func safePath(root, name string) (string, error) {
 
 // allowedCommand 命令白名单:只有明确的命令前缀才允许执行。
 func allowedCommand(cmd string) bool {
-	allowed := []string{"go version", "echo ", "dir"}
+	allowed := []string{"go version", "echo ", "dir", "ls"}
 	for _, a := range allowed {
 		if strings.HasPrefix(cmd, a) {
 			return true
