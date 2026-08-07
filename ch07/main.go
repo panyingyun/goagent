@@ -49,7 +49,7 @@ func main() {
 		// 立即刷出,否则终端会等缓冲区满了才显示
 		_ = os.Stdout.Sync()
 	})
-	fmt.Println()
+	fmt.Println("[YYPAN]  StreamChat 结束")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "\n流式调用失败:", err)
 		os.Exit(1)
