@@ -37,7 +37,19 @@ Agent> 好的,已记住。
 Agent> 根据记忆,你喜欢喝咖啡。
 ```
 
-聊天产生的 `memory.json` 就是 Agent 的"长期记忆"。
+`memory.json` 保存两类长期记忆:
+
+```json
+{
+  "preferences": { "pref": "我喜欢喝咖啡" },
+  "summary": "用户喜欢喝咖啡,正在写周报"
+}
+```
+
+- `preferences`: `/remember` 或句子里出现「记住…」时写入;
+- `summary`: 历史超预算被压缩后写入; `/exit` 时也会再落盘一次。
+
+下次 `go run .` 会自动读回来。请在 `ch06/` 目录下运行,文件就写在当前目录。
 
 ## 记忆是怎么工作的
 

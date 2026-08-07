@@ -9,7 +9,7 @@ import (
 )
 
 // summaryBudget 是历史消息的估算 token 预算:超过就触发压缩。
-const summaryBudget = 3000
+const summaryBudget = 100
 
 // History 管理对话历史:截断 + 摘要压缩,解决"聊久了爆上下文"的问题。
 type History struct {
@@ -87,22 +87,55 @@ func tokenEstimate(s string) int {
 	return int(n*1.2) + 1
 }
 
-// Preferences 是最简的"长期记忆":键值对持久化到 JSON 文件。
+// memoryFile 是 memory.json 的磁盘格式:偏好 + 对话摘要。
+type memoryFile struct {
+	Preferences map[string]string `json:"preferences"`
+	Summary     string            `json:"summary,omitempty"`
+}
+
+// Preferences 是最简的"长期记忆":键值对 + 摘要,持久化到 JSON 文件。
 type Preferences struct {
-	path string
-	data map[string]string
+	path    string
+	data    map[string]string
+	Summary string
 }
 
 func LoadPreferences(path string) (*Preferences, error) {
 	p := &Preferences{path: path, data: map[string]string{}}
-	data, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return p, nil
 		}
 		return nil, err
 	}
-	_ = json.Unmarshal(data, &p.data)
+	if len(strings.TrimSpace(string(raw))) == 0 {
+		return p, nil
+	}
+
+	// 用顶层字段探测格式,避免把 summary 误读进偏好。
+	var probe map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &probe); err != nil {
+		return nil, fmt.Errorf("解析 %s: %w", path, err)
+	}
+	if rawPrefs, ok := probe["preferences"]; ok {
+		if string(rawPrefs) != "null" {
+			if err := json.Unmarshal(rawPrefs, &p.data); err != nil {
+				return nil, fmt.Errorf("解析 %s preferences: %w", path, err)
+			}
+		}
+		if rawSum, ok := probe["summary"]; ok {
+			if err := json.Unmarshal(rawSum, &p.Summary); err != nil {
+				return nil, fmt.Errorf("解析 %s summary: %w", path, err)
+			}
+		}
+		return p, nil
+	}
+
+	// 兼容旧格式: 扁平 {"pref":"..."}
+	if err := json.Unmarshal(raw, &p.data); err != nil {
+		return nil, fmt.Errorf("解析 %s: %w", path, err)
+	}
 	return p, nil
 }
 
@@ -110,8 +143,19 @@ func (p *Preferences) Remember(key, value string) {
 	p.data[key] = value
 }
 
+func (p *Preferences) SetSummary(summary string) {
+	p.Summary = summary
+}
+
 func (p *Preferences) Save() error {
-	data, err := json.MarshalIndent(p.data, "", "  ")
+	file := memoryFile{
+		Preferences: p.data,
+		Summary:     p.Summary,
+	}
+	if file.Preferences == nil {
+		file.Preferences = map[string]string{}
+	}
+	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return err
 	}

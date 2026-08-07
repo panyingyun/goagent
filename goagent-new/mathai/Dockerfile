@@ -17,6 +17,7 @@ COPY pkg/ ./pkg/
 COPY mathai/backend/ ./mathai/backend/
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mathai ./mathai/backend
 
+
 FROM alpine:3.22
 RUN addgroup -S mathai && adduser -S -G mathai mathai
 WORKDIR /app

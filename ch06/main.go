@@ -2,7 +2,7 @@
 //
 // 解决两个问题:
 // 1. 聊久了历史太长 -> 超过预算就交给 LLM 压缩成摘要(记忆);
-// 2. 跨会话记住用户偏好 -> 持久化到 memory.json。
+// 2. 跨会话记住用户偏好与摘要 -> 持久化到 memory.json。
 //
 // 运行(已配置 DEEPSEEK_API_KEY):
 //
@@ -21,6 +21,8 @@ import (
 	"strings"
 )
 
+const memoryPath = "memory.json"
+
 const systemPrompt = `你是一个有记忆的中文助手。对话历史里可能包含一段"早期对话摘要",
 请把它当作你之前的记忆。回答保持简洁清晰。`
 
@@ -31,18 +33,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	prefs, err := LoadPreferences("memory.json")
+	prefs, err := LoadPreferences(memoryPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "读取记忆失败:", err)
 		os.Exit(1)
 	}
 
 	sys := rebuildSystem(prefs)
-	h := &History{System: sys}
+	h := &History{System: sys, Summary: prefs.Summary}
 
 	ctx := context.Background()
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("对话开始。输入 /exit 退出,/reset 清空对话,/remember 内容 记住偏好,/mem 查看偏好,/help 帮助")
+	if prefs.Summary != "" || prefs.String() != "" {
+		fmt.Println("(已从 memory.json 恢复长期记忆)")
+	}
 
 	for {
 		fmt.Print("你> ")
@@ -56,18 +61,36 @@ func main() {
 
 		switch {
 		case line == "/exit":
+			if err := saveMemory(prefs, h); err != nil {
+				fmt.Fprintln(os.Stderr, "保存记忆失败:", err)
+			} else {
+				fmt.Println("记忆已写入", memoryPath)
+			}
 			return
 		case line == "/help":
 			fmt.Println("/exit /reset /remember <内容> /mem /help")
 			continue
 		case line == "/reset":
 			h = &History{System: sys}
+			prefs.SetSummary("")
+			if err := prefs.Save(); err != nil {
+				fmt.Fprintln(os.Stderr, "清空摘要失败:", err)
+			}
 			fmt.Println("已清空对话记忆。")
 			continue
 		case line == "/mem":
+			printed := false
 			if s := prefs.String(); s != "" {
+				fmt.Println("【偏好】")
 				fmt.Println(s)
-			} else {
+				printed = true
+			}
+			if h.Summary != "" {
+				fmt.Println("【摘要】")
+				fmt.Println(h.Summary)
+				printed = true
+			}
+			if !printed {
 				fmt.Println("(暂无偏好)")
 			}
 			continue
@@ -78,7 +101,10 @@ func main() {
 				continue
 			}
 			prefs.Remember("pref", v)
-			_ = prefs.Save()
+			if err := saveMemory(prefs, h); err != nil {
+				fmt.Fprintln(os.Stderr, "保存记忆失败:", err)
+				continue
+			}
 			h.System = rebuildSystem(prefs) // 立即生效,不用等下次启动
 			fmt.Println("记住了:", v)
 			continue
@@ -88,15 +114,23 @@ func main() {
 		if i := strings.Index(line, "记住"); i >= 0 {
 			if v := strings.TrimSpace(line[i+len("记住"):]); v != "" {
 				prefs.Remember("pref", v)
-				_ = prefs.Save()
-				h.System = rebuildSystem(prefs) // 立即生效
-				fmt.Println("已自动记住:", v)
+				if err := saveMemory(prefs, h); err != nil {
+					fmt.Fprintln(os.Stderr, "保存记忆失败:", err)
+				} else {
+					h.System = rebuildSystem(prefs) // 立即生效
+					fmt.Println("已自动记住:", v)
+				}
 			}
 		}
 
 		h.Add(Message{Role: RoleUser, Content: line})
 		if err := h.CompressIfNeeded(ctx, llm); err != nil {
 			fmt.Fprintln(os.Stderr, "压缩失败(继续对话):", err)
+		} else if prefs.Summary != h.Summary {
+			// 摘要有更新时立刻落盘,避免进程异常退出丢失
+			if err := saveMemory(prefs, h); err != nil {
+				fmt.Fprintln(os.Stderr, "保存摘要失败:", err)
+			}
 		}
 		reply, err := llm.Chat(ctx, h.SystemMessages())
 		if err != nil {
@@ -106,6 +140,17 @@ func main() {
 		fmt.Println("Agent>", reply.Content)
 		h.Add(reply)
 	}
+
+	// stdin 结束(Ctrl+D)时也落盘
+	if err := saveMemory(prefs, h); err != nil {
+		fmt.Fprintln(os.Stderr, "保存记忆失败:", err)
+	}
+}
+
+// saveMemory 把偏好与当前摘要一并写入 memory.json。
+func saveMemory(prefs *Preferences, h *History) error {
+	prefs.SetSummary(h.Summary)
+	return prefs.Save()
 }
 
 // rebuildSystem 把当前偏好拼进系统提示词。

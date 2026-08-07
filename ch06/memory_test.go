@@ -74,6 +74,7 @@ func TestPreferencesRoundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	p.Remember("称呼", "小明")
+	p.SetSummary("用户正在写周报")
 	if err := p.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -84,5 +85,22 @@ func TestPreferencesRoundtrip(t *testing.T) {
 	if p2.data["称呼"] != "小明" {
 		t.Fatalf("持久化失败: %v", p2.data)
 	}
+	if p2.Summary != "用户正在写周报" {
+		t.Fatalf("摘要持久化失败: %q", p2.Summary)
+	}
 	_ = os.Remove(path)
+}
+
+func TestLoadLegacyFlatPreferences(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "memory.json")
+	if err := os.WriteFile(path, []byte(`{"pref":"我喜欢喝咖啡"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := LoadPreferences(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.data["pref"] != "我喜欢喝咖啡" {
+		t.Fatalf("应兼容旧扁平格式,实际: %v", p.data)
+	}
 }
