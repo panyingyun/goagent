@@ -29,7 +29,7 @@ import (
 func main() {
 	apiKey := os.Getenv("DEEPSEEK_API_KEY")
 	port := envOr("PORT", "8080")
-	rl := newRateLimiter(5, time.Second) // 每 IP 每秒 5 次
+	rl := newRateLimiter(1, time.Second) // 每 IP 每秒 5 次
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {

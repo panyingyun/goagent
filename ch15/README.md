@@ -11,24 +11,26 @@
 
 ## 运行
 
-```powershell
-cd E:\codex\project001\goagent\ch15
+```bash
+cd ~/panyingyun/goagent/ch15
 go run .
 ```
 
 另一个终端:
 
-```powershell
-Invoke-RestMethod -Uri http://localhost:8080/health
-Invoke-RestMethod -Uri http://localhost:8080/ready
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"你好"}'
+```bash
+curl -s http://localhost:8080/health
+curl -s http://localhost:8080/ready
+curl -s -X POST http://localhost:8080/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"你好"}'
 ```
 
-连续快速点 `/chat`,第 6 次会看到 429 限流。Ctrl+C 观察优雅关闭日志。
+连续快速请求 `/chat`,第 6 次会看到 429 限流。Ctrl+C 观察优雅关闭日志。
 
 ## Docker 部署
 
-```powershell
+```bash
 docker build -t goagent .
 docker run -p 8080:8080 -e DEEPSEEK_API_KEY=你的Key goagent
 ```
