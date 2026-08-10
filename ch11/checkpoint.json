@@ -6,26 +6,30 @@
       "id": 0,
       "desc": "计算第一个加法 1+1",
       "question": "1+1 等于多少？",
-      "status": "pending"
+      "status": "done",
+      "output": "2"
     },
     {
       "id": 1,
       "desc": "计算第二个加法 2+2",
       "question": "2+2 等于多少？",
-      "status": "pending"
+      "status": "done",
+      "output": "4"
     },
     {
       "id": 2,
       "desc": "计算第三个加法 3+3",
       "question": "3+3 等于多少？",
-      "status": "pending"
+      "status": "done",
+      "output": "6"
     },
     {
       "id": 3,
       "desc": "汇总所有加法结果",
       "question": "这三个加法的结果分别是什么？",
-      "status": "pending"
+      "status": "done",
+      "output": "三个加法的结果分别是：2、4、6。"
     }
   ],
-  "current": 0
+  "current": 4
 }
