@@ -1,0 +1,31 @@
+{
+  "id": "wf-1",
+  "goal": "帮我同时查几个问题:1+1=? 2+2=? 3+3=?",
+  "steps": [
+    {
+      "id": 0,
+      "desc": "计算第一个加法 1+1",
+      "question": "1+1 等于多少？",
+      "status": "pending"
+    },
+    {
+      "id": 1,
+      "desc": "计算第二个加法 2+2",
+      "question": "2+2 等于多少？",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "desc": "计算第三个加法 3+3",
+      "question": "3+3 等于多少？",
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "desc": "汇总所有加法结果",
+      "question": "这三个加法的结果分别是什么？",
+      "status": "pending"
+    }
+  ],
+  "current": 0
+}
