@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
 	"time"
 )
 
@@ -18,38 +18,49 @@ func NewLogger(w io.Writer) *Logger {
 }
 
 func (l *Logger) Log(level, event string, fields map[string]any) {
-	// map + json.Marshal 会按 key 字典序输出,ts 往往排到最后。
-	// 这里按固定顺序手写 JSON:ts → level → event → 其余字段(字典序)。
-	type kv struct {
-		k string
-		v any
+	entry := orderedObject{}.
+		Set("ts", time.Now().Format(time.DateTime)).
+		Set("level", level).
+		Set("event", event)
+	for k, v := range fields {
+		entry = entry.Set(k, v)
 	}
-	items := []kv{
-		{"ts", time.Now().Format(time.RFC3339)},
-		{"level", level},
-		{"event", event},
-	}
-	extra := make([]string, 0, len(fields))
-	for k := range fields {
-		extra = append(extra, k)
-	}
-	sort.Strings(extra)
-	for _, k := range extra {
-		items = append(items, kv{k, fields[k]})
-	}
+	data, _ := json.Marshal(entry)
+	fmt.Fprintln(l.w, string(data))
+}
 
-	buf := make([]byte, 0, 128)
-	buf = append(buf, '{')
-	for i, it := range items {
+// orderedObject 按 Set 的先后顺序序列化 JSON 对象。
+// Go 的 map 本身无序;标准库也没有 ordered map,用这个小类型即可。
+type orderedObject []orderedField
+
+type orderedField struct {
+	Key   string
+	Value any
+}
+
+func (o orderedObject) Set(key string, value any) orderedObject {
+	return append(o, orderedField{Key: key, Value: value})
+}
+
+func (o orderedObject) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, f := range o {
 		if i > 0 {
-			buf = append(buf, ',')
+			buf.WriteByte(',')
 		}
-		kb, _ := json.Marshal(it.k)
-		vb, _ := json.Marshal(it.v)
-		buf = append(buf, kb...)
-		buf = append(buf, ':')
-		buf = append(buf, vb...)
+		kb, err := json.Marshal(f.Key)
+		if err != nil {
+			return nil, err
+		}
+		vb, err := json.Marshal(f.Value)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(kb)
+		buf.WriteByte(':')
+		buf.Write(vb)
 	}
-	buf = append(buf, '}')
-	fmt.Fprintln(l.w, string(buf))
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
 }
