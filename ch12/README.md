@@ -21,14 +21,14 @@ ch12/
 ├── security.go    # 提示注入检测
 ├── logging.go     # 一行一个 JSON 的结构化日志
 ├── eval/cases.json # 3 个回归用例
-├── ch10_test.go   # 离线测试:重试/防护/评估/HTTP
+├── ch12_test.go   # 离线测试:重试/防护/评估/HTTP
 └── README.md
 ```
 
 ## 运行
 
-```powershell
-cd E:\codex\project001\goagent\ch12
+```bash
+cd ~/panyingyun/goagent/ch12
 
 # 1. 跑评估(用真实 DeepSeek,花几毛钱验证 Agent 没被改坏)
 go run . -eval
@@ -36,13 +36,15 @@ go run . -eval
 # 2. 启动 HTTP 服务
 go run .
 # 另一个终端:
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/chat -ContentType application/json -Body '{"question":"12 * 8 + 4 等于多少?"}'
-Invoke-RestMethod -Uri http://localhost:8080/health
+curl -s -X POST http://localhost:8080/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"12 * 8 + 4 等于多少?"}'
+curl -s http://localhost:8080/health
 ```
 
 离线测试:
 
-```powershell
+```bash
 go test ./... -v
 ```
 

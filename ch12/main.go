@@ -107,7 +107,7 @@ func (s *server) handleChat(w http.ResponseWriter, r *http.Request) {
 	s.logger.Log("info", "chat", map[string]any{
 		"question": truncateStr(req.Question, 80),
 		"guard":    guardMsg != "",
-		"duration": time.Since(start).String(),
+		"duration": time.Since(start).Seconds(),
 	})
 	if err != nil {
 		s.logger.Log("error", "chat_failed", map[string]any{"err": err.Error()})
