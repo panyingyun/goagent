@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -113,6 +114,19 @@ func TestReadToolsCanRunInParallel(t *testing.T) {
 	}
 	if results[0].Out != "one" || results[1].Out != "two" {
 		t.Fatalf("result order changed: %+v", results)
+	}
+}
+
+func TestObjectSchemaRequiredIsEmptyArrayNotNull(t *testing.T) {
+	raw, err := json.Marshal(objectSchema(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"required":null`) {
+		t.Fatalf("required must not be null: %s", raw)
+	}
+	if !strings.Contains(string(raw), `"required":[]`) {
+		t.Fatalf("required should be empty array: %s", raw)
 	}
 }
 

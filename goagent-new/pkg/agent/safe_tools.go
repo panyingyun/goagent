@@ -11,7 +11,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
+
+	_ "time/tzdata"
 )
 
 func NewCalculatorTool() Tool {
@@ -38,6 +41,29 @@ func NewCalculatorTool() Tool {
 				return "", err
 			}
 			return strconv.FormatFloat(value, 'f', -1, 64), nil
+		},
+	}
+}
+
+func NewGetTimeTool() Tool {
+	return Tool{
+		Name:         "get_time",
+		Description:  "获取当前日期和时间(北京时间 Asia/Shanghai)。",
+		Parameters:   objectSchema(nil),
+		SideEffect:   SideEffectNone,
+		Cacheable:    false,
+		Idempotent:   true,
+		ParallelSafe: true,
+		Timeout:      2 * time.Second,
+		Run: func(ctx context.Context, _ json.RawMessage) (string, error) {
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+			loc, err := time.LoadLocation("Asia/Shanghai")
+			if err != nil {
+				return "", err
+			}
+			return time.Now().In(loc).Format("2006-01-02 15:04:05 (Monday)"), nil
 		},
 	}
 }
@@ -155,6 +181,10 @@ func NewWriteFileTool(root string) Tool {
 func objectSchema(properties map[string]any, required ...string) map[string]any {
 	if properties == nil {
 		properties = map[string]any{}
+	}
+	// 无必填字段时也要发 []，不能发 null；部分供应商会拒绝 required:null。
+	if required == nil {
+		required = []string{}
 	}
 	return map[string]any{
 		"type":                 "object",

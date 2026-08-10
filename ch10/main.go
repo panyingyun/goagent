@@ -16,7 +16,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -55,11 +54,11 @@ func registerDemoTools(r *Registry) {
 			Description: desc,
 			Required:    []string{"a", "b"},
 			Run: func(ctx context.Context, args map[string]any) (string, error) {
-				select {
-				case <-ctx.Done():
-					return "", ctx.Err()
-				case <-time.After(300 * time.Millisecond): // 模拟耗时工具
-				}
+				// select {
+				// case <-ctx.Done():
+				// 	return "", ctx.Err()
+				// case <-time.After(300 * time.Millisecond): // 模拟耗时工具
+				// }
 				a, ok1 := toFloat(args["a"])
 				b, ok2 := toFloat(args["b"])
 				if !ok1 || !ok2 {

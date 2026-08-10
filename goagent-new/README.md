@@ -47,7 +47,7 @@
 | [ch20](ch20-system-evaluation/) | 系统评估 | 路径、状态、预算、故障注入和版本比较 |
 | [ch21](ch21-repopilot/) | 高级综合项目 | 可审批、可恢复、可学习的 RepoPilot |
 
-附录位于 [appendices](appendices/)：文本 ReAct、MCP、Skill、多 Agent，以及框架概念映射。附录不是核心主线的前置条件。
+附录位于 [appendices](appendices/)：MCP、Skill、多 Agent，以及框架概念映射。附录不是核心主线的前置条件。若想一次跑通「旧课 ch04 风格」的综合 demo，见 [appendices/complete-agent](appendices/complete-agent/)。
 
 ## 运行
 
@@ -113,7 +113,7 @@ goagent-new/
 ## 教学原则
 
 - 每个外部输入都不可信，包括用户消息、网页、检索片段、MCP 工具说明和模型输出；
-- 默认使用原生 tool calls；文本 ReAct 仅用于理解历史和协议权衡；
+- 默认使用原生 tool calls；
 - 读工具可以安全并行，写工具默认串行并要求审批；
 - 缓存、重试和恢复必须服从副作用与幂等语义；
 - 提示词不是安全边界，真正的边界必须在代码、权限和隔离层；

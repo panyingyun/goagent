@@ -101,7 +101,7 @@ func (e *Executor) ExecuteParallel(ctx context.Context, calls []ToolCall) []Tool
 	var wg sync.WaitGroup
 	workers := len(calls)
 	if workers > 4 {
-		workers = 4
+		workers = 1
 	}
 	for w := 0; w < workers; w++ {
 		wg.Add(1)
