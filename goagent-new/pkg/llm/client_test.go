@@ -28,6 +28,23 @@ func TestHTTPClientComplete(t *testing.T) {
 	}
 }
 
+func TestHTTPClientPrefersDeepSeekTraceID(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("X-Request-Id", "generic-req")
+		w.Header().Set("X-Ds-Trace-Id", "ds-trace-1")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	defer srv.Close()
+	c := NewHTTPClient("secret", srv.URL, "test-model")
+	got, err := c.Complete(context.Background(), Request{Messages: []Message{{Role: RoleUser, Content: "hi"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.RequestID != "ds-trace-1" {
+		t.Fatalf("request id = %q, want DeepSeek trace id", got.RequestID)
+	}
+}
+
 func TestHTTPClientClassifiesRetryableStatus(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "busy", http.StatusTooManyRequests)

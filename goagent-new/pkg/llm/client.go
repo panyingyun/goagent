@@ -72,7 +72,7 @@ func (c *HTTPClient) Complete(ctx context.Context, in Request) (Response, error)
 		return Response{}, fmt.Errorf("send llm request: %w", err)
 	}
 	defer resp.Body.Close()
-	requestID := resp.Header.Get("X-Request-Id")
+	requestID := responseRequestID(resp.Header)
 	limited := io.LimitReader(resp.Body, maxResponseBytes+1)
 	data, err := io.ReadAll(limited)
 	if err != nil {
@@ -112,3 +112,13 @@ func truncate(s string, max int) string {
 	return s[:max] + "..."
 }
 
+// responseRequestID 从响应头提取供应商请求追踪 ID。
+// DeepSeek 使用 X-Ds-Trace-Id；其它 OpenAI-compatible 供应商常见 X-Request-Id。
+func responseRequestID(h http.Header) string {
+	for _, key := range []string{"X-Ds-Trace-Id", "X-Request-Id"} {
+		if id := h.Get(key); id != "" {
+			return id
+		}
+	}
+	return ""
+}
