@@ -17,13 +17,13 @@
 
 从 `goagent-new/mathai` 执行：
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 docker compose config
 docker compose up --build -d
 docker compose ps
-Invoke-RestMethod http://localhost:8080/livez
-Invoke-RestMethod http://localhost:8080/readyz
+curl -s http://localhost:8080/livez
+curl -s http://localhost:8080/readyz
 ```
 
 Docker build context 是 `goagent-new`，因为后端会复用父目录的 `pkg/agent`、`pkg/llm` 和 `pkg/trace`。不要把 context 改成 `mathai`，否则共享包无法复制进构建阶段。

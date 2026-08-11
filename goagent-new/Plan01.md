@@ -1,5 +1,31 @@
 # Plan01：Go Agent 架构演进计划
 
+## 0. 当前状态（2026-08-12）
+
+### 课程学习进度
+
+| 范围 | 状态 | 说明 |
+|---|---|---|
+| ch00～ch13 | ✅ 已完成 | 足以进入 ch14 后端（`pkg/llm` + `pkg/agent` + `pkg/trace` + HTTP） |
+| ch14 MathAI (`mathai/`) | ➡ 下一步 | 产品组装；前端需额外 React/TS，不依赖 ch15～ch21 |
+| ch15～ch21 | 未开始 | Harness / Graph / Learning / RepoPilot 进阶线 |
+| 架构阶段 0～4 | 未开始 | 见下文任务清单，近期只建议启动阶段 0/1 |
+
+### 工程侧已落地（教学主线外、不阻塞学习）
+
+- 联网示例默认 DeepSeek：`DEEPSEEK_API_KEY`，URL/模型默认 `https://api.deepseek.com` + `deepseek-v4-flash`（`pkg/llm.NewHTTPClientFromEnv`）
+- `pkg/` 主要结构体已补中文注释
+
+### 架构演进阶段看板
+
+| 阶段 | 主题 | 状态 |
+|---|---|---|
+| 0 | ADR（包边界与术语） | 未开始 |
+| 1 | `pkg/governance` | 未开始 |
+| 2 | Tooling / `pkg/tools` 抽离 | 未开始 |
+| 3 | Workflow ↔ Graph 收敛 | 未开始 |
+| 4 | Eval 命名空间收拢 | 未开始 |
+
 ## 1. 背景
 
 随着 `goagent-new` 从基础 Agent 循环扩展到 Harness、Learning、Graph、Durable Runtime 和综合案例，现有架构已经具备完整教学链路，但也出现了下一阶段需要控制的边界问题：
@@ -373,4 +399,6 @@ Eval namespace 整理
 
 ## 15. 当前建议
 
-近期只启动阶段 0 和阶段 1：先完成 ADR 与 Governance 契约。Tooling、Workflow/Graph 和 Eval 的目录重构应在契约稳定后分阶段进行，避免为了结构整洁破坏当前已通过测试的教学主线。
+**学习主线**：继续 ch14 MathAI（先 `docs/course-guide.md` → `domain.go` → `math_agent.go`），把 ch00～ch13 已学组件组装成 Web 产品；前端按需补 React/TS。
+
+**架构主线**：近期只启动阶段 0 和阶段 1——先完成 ADR 与 Governance 契约。Tooling、Workflow/Graph 和 Eval 的目录重构应在契约稳定后分阶段进行，避免为了结构整洁破坏当前已通过测试的教学主线。不与 ch14 学习抢优先级。

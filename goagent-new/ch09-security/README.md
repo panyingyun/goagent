@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch09-security -host example.com https://example.com
 go test ./ch09-security -v
 ```

@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch03-tool-calling "计算 2+3*4"
 go test ./ch03-tool-calling -v
 ```

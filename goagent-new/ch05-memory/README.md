@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch05-memory set drink coffee
 go run ./ch05-memory get drink
 go run ./ch05-memory list

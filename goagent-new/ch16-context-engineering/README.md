@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch16-context-engineering
 go test ./pkg/contextkit ./ch16-context-engineering -v
 ```

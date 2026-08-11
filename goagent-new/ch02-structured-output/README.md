@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch02-structured-output "发布一个 Agent 服务"
 go test ./ch02-structured-output -v
 ```

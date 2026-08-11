@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch18-graph-engineering
 go test ./pkg/graph ./ch18-graph-engineering -v
 ```

@@ -1,10 +1,12 @@
 # ch00：Go 前置能力
 
+> 学习状态：✅ 已完成
+
 本章不讲 Agent 名词，先补齐后续会反复使用的 Go 能力。代码可以直接运行，测试不需要 API Key。
 
 ## 运行
 
-```powershell
+```bash
 cd goagent-new
 go run ./ch00-go-foundations
 go test ./ch00-go-foundations -v
@@ -12,11 +14,21 @@ go test ./ch00-go-foundations -v
 
 ## 代码地图
 
-| 文件 | 内容 |
+| 文件 | 内容 | 状态 |
+|---|---|---|
+| [`main.go`](main.go) | 严格 JSON 与有限并发演示 | ✅ |
+| [`foundations.go`](foundations.go) | `DecodeJSONStrict`、受 context 控制的 HTTP、worker pool | ✅ |
+| [`foundations_test.go`](foundations_test.go) | 超时、响应体限制、未知字段、并发上限、结果顺序测试 | ✅ |
+
+## 与后续章节的关系
+
+| 本章能力 | 后续主要用到 |
 |---|---|
-| [`main.go`](main.go) | 严格 JSON 与有限并发演示 |
-| [`foundations.go`](foundations.go) | `DecodeJSONStrict`、受 context 控制的 HTTP、worker pool |
-| [`foundations_test.go`](foundations_test.go) | 超时、响应体限制、未知字段、并发上限、结果顺序测试 |
+| `context` / HTTP 超时与 Body 限制 | ch01 `pkg/llm`、ch12 部署 |
+| 严格 JSON（未知字段、单值） | ch02 结构化输出、工具参数解码、MathAI `GraphPatch` |
+| interface + fake | 各章单测、scripted LLM |
+| 有限并发 worker | ch04 并行安全工具 |
+| 文件权限 / 原子写直觉 | ch05 记忆、ch08 检查点、ch12/ch14 持久化 |
 
 ## 必会清单
 

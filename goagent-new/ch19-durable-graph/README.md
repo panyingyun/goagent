@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch19-durable-graph
 go run ./ch19-durable-graph -resume
 go test ./pkg/graphstore ./ch19-durable-graph -v

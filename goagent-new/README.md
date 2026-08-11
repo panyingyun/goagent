@@ -22,30 +22,30 @@
 
 ## 推荐路径
 
-| 课时 | 主题 | 产出 |
-|---|---|---|
-| [ch00](ch00-go-foundations/) | Go 前置能力 | context、HTTP、JSON、interface、并发与测试清单 |
-| [ch01](ch01-llm-api/) | LLM API | 可配置客户端、错误分类、usage |
-| [ch02](ch02-structured-output/) | 结构化输出 | 严格解码、字段校验、失败策略 |
-| [ch03](ch03-tool-calling/) | 原生 Tool Calling | 最小但完整的 Agent 循环 |
-| [ch04](ch04-tool-runtime/) | 工具运行时 | 权限、审批、幂等、缓存、并行、超时 |
-| [ch05](ch05-memory/) | 状态与记忆 | 窗口、摘要、偏好和删除 |
-| [ch06](ch06-streaming/) | 流式与取消 | SSE、客户端断开、背压 |
-| [ch07](ch07-evaluation/) | 评估驱动开发 | 回归集、工具轨迹、任务成功率 |
-| [ch08](ch08-workflow/) | 工作流 | 原子检查点、恢复、HITL |
-| [ch09](ch09-security/) | Agent 安全 | 威胁模型和安全工具边界 |
-| [ch10](ch10-rag/) | 可选 RAG | 关键词基线、embedding 接口、Recall@K |
-| [ch11](ch11-observability/) | 可观测与成本 | trace、usage、延迟和预算 |
-| [ch12](ch12-deployment/) | 部署 | 认证、限流、超时、健康检查 |
-| [ch13](ch13-capstone/) | 综合项目 | 可运行的 Workspace Agent |
-| [ch14](mathai/) | Web 综合案例 | MathAI 前后端、Graph 工具、trace 与 Docker |
-| [ch15](ch15-harness-engineering/) | Harness Engineering | 能力清单、任务预算、无进展检测与统一验收 |
-| [ch16](ch16-context-engineering/) | Context Engineering | 可信来源、相关性选择与上下文预算 |
-| [ch17](ch17-agent-learning/) | Agent Learning Loop | 经验、证据、回归门禁、晋级与检索 |
-| [ch18](ch18-graph-engineering/) | Graph Engineering | 节点、边、条件、循环和拓扑验证 |
-| [ch19](ch19-durable-graph/) | Durable Graph | Checkpoint、Event Log、恢复和状态迁移 |
-| [ch20](ch20-system-evaluation/) | 系统评估 | 路径、状态、预算、故障注入和版本比较 |
-| [ch21](ch21-repopilot/) | 高级综合项目 | 可审批、可恢复、可学习的 RepoPilot |
+| 课时 | 主题 | 产出 | 状态 |
+|---|---|---|---|
+| [ch00](ch00-go-foundations/) | Go 前置能力 | context、HTTP、JSON、interface、并发与测试清单 | ✅ 已完成 |
+| [ch01](ch01-llm-api/) | LLM API | 可配置客户端、错误分类、usage | ✅ 已完成 |
+| [ch02](ch02-structured-output/) | 结构化输出 | 严格解码、字段校验、失败策略 | ✅ 已完成 |
+| [ch03](ch03-tool-calling/) | 原生 Tool Calling | 最小但完整的 Agent 循环 | ✅ 已完成 |
+| [ch04](ch04-tool-runtime/) | 工具运行时 | 权限、审批、幂等、缓存、并行、超时 | ✅ 已完成 |
+| [ch05](ch05-memory/) | 状态与记忆 | 窗口、摘要、偏好和删除 | ✅ 已完成 |
+| [ch06](ch06-streaming/) | 流式与取消 | SSE、客户端断开、背压 | ✅ 已完成 |
+| [ch07](ch07-evaluation/) | 评估驱动开发 | 回归集、工具轨迹、任务成功率 | ✅ 已完成 |
+| [ch08](ch08-workflow/) | 工作流 | 原子检查点、恢复、HITL | ✅ 已完成 |
+| [ch09](ch09-security/) | Agent 安全 | 威胁模型和安全工具边界 | ✅ 已完成 |
+| [ch10](ch10-rag/) | 可选 RAG | 关键词基线、embedding 接口、Recall@K | ✅ 已完成 |
+| [ch11](ch11-observability/) | 可观测与成本 | trace、usage、延迟和预算 | ✅ 已完成 |
+| [ch12](ch12-deployment/) | 部署 | 认证、限流、超时、健康检查 | ✅ 已完成 |
+| [ch13](ch13-capstone/) | 综合项目 | 可运行的 Workspace Agent | ✅ 已完成 |
+| [ch14](mathai/) | Web 综合案例 | MathAI 前后端、Graph 工具、trace 与 Docker | ➡ 下一步 |
+| [ch15](ch15-harness-engineering/) | Harness Engineering | 能力清单、任务预算、无进展检测与统一验收 | 未开始 |
+| [ch16](ch16-context-engineering/) | Context Engineering | 可信来源、相关性选择与上下文预算 | 未开始 |
+| [ch17](ch17-agent-learning/) | Agent Learning Loop | 经验、证据、回归门禁、晋级与检索 | 未开始 |
+| [ch18](ch18-graph-engineering/) | Graph Engineering | 节点、边、条件、循环和拓扑验证 | 未开始 |
+| [ch19](ch19-durable-graph/) | Durable Graph | Checkpoint、Event Log、恢复和状态迁移 | 未开始 |
+| [ch20](ch20-system-evaluation/) | 系统评估 | 路径、状态、预算、故障注入和版本比较 | 未开始 |
+| [ch21](ch21-repopilot/) | 高级综合项目 | 可审批、可恢复、可学习的 RepoPilot | 未开始 |
 
 附录位于 [appendices](appendices/)：MCP、Skill、多 Agent，以及框架概念映射。附录不是核心主线的前置条件。若想一次跑通「旧课 ch04 风格」的综合 demo，见 [appendices/complete-agent](appendices/complete-agent/)。
 
@@ -73,11 +73,11 @@ go run ./cmd/workspace-server
 
 然后请求：
 
-```powershell
-Invoke-RestMethod -Method Post -Uri http://localhost:8080/v1/chat `
-  -Headers @{ Authorization = "Bearer local-dev-token" } `
-  -ContentType application/json `
-  -Body '{"message":"列出工作区里的文档"}'
+```bash
+curl -s -X POST http://localhost:8080/v1/chat \
+  -H "Authorization: Bearer local-dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"列出工作区里的文档"}'
 ```
 
 ## 目录结构

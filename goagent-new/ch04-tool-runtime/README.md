@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch04-tool-runtime
 go run ./ch04-tool-runtime -approve
 go test ./ch04-tool-runtime -v

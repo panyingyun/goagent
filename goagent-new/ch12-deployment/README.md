@@ -4,8 +4,8 @@
 
 ## 运行与代码
 
-```powershell
-$env:AGENT_API_TOKEN = "local-token"
+```bash
+export AGENT_API_TOKEN="local-token"
 go run ./ch12-deployment
 go test ./ch12-deployment -v
 ```

@@ -6,20 +6,20 @@ RepoPilot 把 ch15～ch20 组装成一个受控的代码变更任务：检查文
 
 默认不批准写入，只会走 denied 路径：
 
-```powershell
+```bash
 go run ./ch21-repopilot
 ```
 
 复制教学工作区后再运行写入示例，避免修改仓库 fixture：
 
-```powershell
-Copy-Item -Recurse ch21-repopilot/testdata/workspace data/repopilot-workspace
+```bash
+cp -r ch21-repopilot/testdata/workspace data/repopilot-workspace
 go run ./ch21-repopilot -workspace data/repopilot-workspace -approve
 ```
 
 测试：
 
-```powershell
+```bash
 go test ./ch21-repopilot -v
 ```
 

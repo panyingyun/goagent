@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch17-agent-learning
 go test ./pkg/learning ./ch17-agent-learning -v
 ```

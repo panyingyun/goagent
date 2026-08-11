@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch08-workflow -approve
 go run ./ch08-workflow -resume -approve
 go test ./ch08-workflow -v

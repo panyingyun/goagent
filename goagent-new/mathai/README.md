@@ -49,7 +49,7 @@ npm run dev
 
 ## 测试与构建
 
-```powershell
+```bash
 cd goagent-new
 go test ./mathai/backend -v
 
@@ -61,9 +61,9 @@ npm run build
 
 ## Docker
 
-```powershell
+```bash
 cd goagent-new/mathai
-Copy-Item .env.example .env
+cp .env.example .env
 # 修改 .env
 docker compose up --build
 ```

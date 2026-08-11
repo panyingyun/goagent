@@ -2,7 +2,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch13-capstone "列出工作区文档"
 go run ./ch13-capstone -approve-write "把 2+3 的结果写到 result.txt"
 go test ./ch13-capstone -v

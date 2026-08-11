@@ -4,7 +4,7 @@ RAG 不是所有 Agent 的必选组件。本章从可测量的检索问题开始
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch10-rag -q "住宿报销上限" -k 2
 go test ./ch10-rag -v
 ```

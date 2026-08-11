@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch15-harness-engineering
 go test ./pkg/harness ./ch15-harness-engineering -v
 ```

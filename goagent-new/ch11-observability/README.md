@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch11-observability
 go test ./ch11-observability -v
 ```

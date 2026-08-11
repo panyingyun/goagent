@@ -4,9 +4,9 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch06-streaming
-Invoke-WebRequest "http://localhost:8080/stream?q=hello"
+curl -s "http://localhost:8080/stream?q=hello"
 go test ./ch06-streaming -v
 ```
 

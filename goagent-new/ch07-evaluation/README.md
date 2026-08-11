@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch07-evaluation
 go test ./ch07-evaluation -v
 ```

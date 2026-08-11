@@ -4,7 +4,7 @@
 
 ## 运行与代码
 
-```powershell
+```bash
 go run ./ch01-llm-api "用一句话介绍 Agent"
 go test ./ch01-llm-api -v
 ```

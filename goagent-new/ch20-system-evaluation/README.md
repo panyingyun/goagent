@@ -4,7 +4,7 @@
 
 ## 运行
 
-```powershell
+```bash
 go run ./ch20-system-evaluation
 go test ./pkg/systemeval ./ch20-system-evaluation -v
 ```
