@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -45,7 +46,37 @@ func TestHTTPClientPrefersDeepSeekTraceID(t *testing.T) {
 	}
 }
 
-func TestHTTPClientClassifiesRetryableStatus(t *testing.T) {
+func TestHTTPClientSendsResponseFormat(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			ResponseFormat *ResponseFormat `json:"response_format"`
+			Temperature    *float64        `json:"temperature"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body.ResponseFormat == nil || body.ResponseFormat.Type != "json_object" {
+			t.Fatalf("response_format = %+v", body.ResponseFormat)
+		}
+		if body.Temperature == nil || *body.Temperature != 0 {
+			t.Fatalf("temperature = %v", body.Temperature)
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}],"usage":{}}`))
+	}))
+	defer srv.Close()
+	c := NewHTTPClient("secret", srv.URL, "test-model")
+	zero := 0.0
+	_, err := c.Complete(context.Background(), Request{
+		Messages:       []Message{{Role: RoleUser, Content: "hi"}},
+		Temperature:    &zero,
+		ResponseFormat: &ResponseFormat{Type: "json_object"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestHTTPClientRetryableError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "busy", http.StatusTooManyRequests)
 	}))

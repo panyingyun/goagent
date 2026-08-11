@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+const (
+	MinSteps = 1
+	MaxSteps = 5
+)
+
 // Step 是任务计划中的单个步骤。
 type Step struct {
 	ID   string `json:"id"`
@@ -34,8 +39,8 @@ func DecodeTaskPlan(content string) (TaskPlan, error) {
 	if strings.TrimSpace(plan.Title) == "" {
 		return plan, errors.New("title is required")
 	}
-	if len(plan.Steps) < 1 || len(plan.Steps) > 5 {
-		return plan, errors.New("steps must contain 1 to 5 items")
+	if len(plan.Steps) < MinSteps || len(plan.Steps) > MaxSteps {
+		return plan, fmt.Errorf("steps must contain %d to %d items", MinSteps, MaxSteps)
 	}
 	seen := make(map[string]bool)
 	for i, step := range plan.Steps {

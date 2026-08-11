@@ -51,12 +51,13 @@ func (c *HTTPClient) Complete(ctx context.Context, in Request) (Response, error)
 		return Response{}, errors.New("缺少 DEEPSEEK_API_KEY(或 LLM_API_KEY)")
 	}
 	payload := struct {
-		Model       string           `json:"model"`
-		Messages    []Message        `json:"messages"`
-		Tools       []ToolDefinition `json:"tools,omitempty"`
-		Temperature *float64         `json:"temperature,omitempty"`
-		Stream      bool             `json:"stream"`
-	}{c.Model, in.Messages, in.Tools, in.Temperature, false}
+		Model          string           `json:"model"`
+		Messages       []Message        `json:"messages"`
+		Tools          []ToolDefinition `json:"tools,omitempty"`
+		Temperature    *float64         `json:"temperature,omitempty"`
+		ResponseFormat *ResponseFormat  `json:"response_format,omitempty"`
+		Stream         bool             `json:"stream"`
+	}{c.Model, in.Messages, in.Tools, in.Temperature, in.ResponseFormat, false}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return Response{}, fmt.Errorf("encode llm request: %w", err)

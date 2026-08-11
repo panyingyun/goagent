@@ -12,31 +12,23 @@ import (
 	"goagent-new/pkg/structured"
 )
 
-func createPlan(ctx context.Context, client llm.Client, goal string) (structured.TaskPlan, error) {
-	response, err := client.Complete(ctx, llm.Request{Messages: []llm.Message{
-		{Role: llm.RoleSystem, Content: `把目标拆成 1 到 5 步，只输出 JSON：{"title":"...","steps":[{"id":"s1","task":"..."}]}`},
-		{Role: llm.RoleUser, Content: goal},
-	}})
-	if err != nil {
-		return structured.TaskPlan{}, err
-	}
-	return structured.DecodeTaskPlan(response.Message.Content)
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: go run ./ch02-structured-output <goal>")
 		os.Exit(2)
 	}
 	client := llm.NewHTTPClientFromEnv()
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	plan, err := createPlan(ctx, client, strings.Join(os.Args[1:], " "))
+	plan, err := structured.CreateTaskPlan(ctx, client, strings.Join(os.Args[1:], " "))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "结构化输出校验失败:", err)
+		fmt.Fprintln(os.Stderr, "结构化输出失败:", err)
 		os.Exit(1)
 	}
-	data, _ := json.MarshalIndent(plan, "", "  ")
+	data, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	fmt.Println(string(data))
 }
-

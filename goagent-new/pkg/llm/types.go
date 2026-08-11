@@ -46,11 +46,18 @@ type ToolDefinition struct {
 	Function FunctionDefinition `json:"function"`
 }
 
+// ResponseFormat 请求供应商以指定格式返回(如 json_object)。
+// DeepSeek / OpenAI-compatible 常用 Type: "json_object"；应用端仍须严格解码与业务校验。
+type ResponseFormat struct {
+	Type string `json:"type"`
+}
+
 // Request 是一次补全请求的入参(消息、可选工具与采样温度)。
 type Request struct {
-	Messages    []Message
-	Tools       []ToolDefinition
-	Temperature *float64
+	Messages       []Message
+	Tools          []ToolDefinition
+	Temperature    *float64
+	ResponseFormat *ResponseFormat
 }
 
 // Usage 记录本次调用的 token 用量。
