@@ -1,0 +1,2 @@
+[permissions]
+allow = ["Bash=cd /e/panyingyun/goagent && ls -la .reasonix/attachments/ && file .reasonix/attachments/clipboard-20260810-131912.056708-000001.jpg 2>/dev/null || python -c \"print('no file cmd')\""]
