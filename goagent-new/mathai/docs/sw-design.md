@@ -862,7 +862,7 @@ POST /api/chat
 ```env
 DEEPSEEK_API_KEY=your_deepseek_api_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_MODEL=deepseek-v4-flash
 DATABASE_URL=sqlite:///./math_graph_ai.db
 ```
 
@@ -887,7 +887,7 @@ import httpx
 async def call_deepseek(messages: list[dict]) -> str:
     api_key = os.getenv("DEEPSEEK_API_KEY")
     base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-    model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
 
     async with httpx.AsyncClient(timeout=60) as client:
         response = await client.post(

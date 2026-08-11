@@ -4,3 +4,5 @@ data/
 coverage.out
 
 mathai/frontend/node_modules/
+ch00-go-foundations/ch00-go-foundations
+ch01-llm-api/ch01-llm-api

@@ -9,7 +9,7 @@ Authorization: Bearer local-dev-token
 ## 健康检查
 
 - `GET /livez`：进程存活即返回 200；
-- `GET /readyz`：`LLM_API_KEY` 与 `LLM_MODEL` 已配置才返回 200。
+- `GET /readyz`：已配置 `DEEPSEEK_API_KEY`(或兼容的 `LLM_API_KEY`) 才返回 200。
 
 ## 会话
 

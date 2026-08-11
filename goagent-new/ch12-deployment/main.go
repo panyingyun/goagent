@@ -19,8 +19,7 @@ func main() {
 	if token == "" {
 		log.Fatal("AGENT_API_TOKEN must be configured")
 	}
-	apiKey, model := os.Getenv("LLM_API_KEY"), os.Getenv("LLM_MODEL")
-	client := llm.NewHTTPClient(apiKey, envOr("LLM_BASE_URL", "https://api.deepseek.com"), model)
+	client := llm.NewHTTPClientFromEnv()
 	app, err := workspace.New(envOr("WORKSPACE_DIR", filepath.FromSlash("testdata/workspace")), client, nil, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +29,7 @@ func main() {
 			answer, _, err := app.Chat(ctx, nil, message)
 			return answer, err
 		}),
-		Token: token, Ready: apiKey != "" && model != "", Timeout: 60 * time.Second,
+		Token: token, Ready: client.Configured(), Timeout: 60 * time.Second,
 	}
 	server := &http.Server{
 		Addr: ":" + envOr("PORT", "8080"), Handler: api.Handler(),

@@ -27,18 +27,19 @@ mathai/
 
 后端需要一个支持原生 tool calling 的 OpenAI-compatible 模型：
 
-```powershell
+```bash
 cd goagent-new/mathai
-$env:LLM_API_KEY = "你的密钥"
-$env:LLM_BASE_URL = "https://api.deepseek.com"
-$env:LLM_MODEL = "供应商当前支持工具调用的模型"
-$env:MATHAI_API_TOKEN = "local-dev-token" # 可留空；生产环境不要留空
+export DEEPSEEK_API_KEY="你的密钥"
+# 可选：默认已是 deepseek 官方 URL 与 deepseek-v4-flash
+# export DEEPSEEK_BASE_URL="https://api.deepseek.com"
+# export DEEPSEEK_MODEL="deepseek-v4-flash"
+export MATHAI_API_TOKEN="local-dev-token" # 可留空；生产环境不要留空
 go run ./backend
 ```
 
 另开终端启动前端。开发服务器会把 `/api` 代理到 `localhost:8080`：
 
-```powershell
+```bash
 cd goagent-new/mathai/frontend
 npm install
 npm run dev

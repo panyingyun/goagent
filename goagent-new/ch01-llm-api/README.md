@@ -22,7 +22,7 @@ go test ./ch01-llm-api -v
 - 从响应中记录 request ID、finish reason 和 usage；
 - 模型名、价格和 base URL 必须配置化。
 
-实现位于 [`pkg/llm`](../pkg/llm/)。联网运行前设置 `LLM_API_KEY`、`LLM_BASE_URL` 和 `LLM_MODEL`。
+实现位于 [`pkg/llm`](../pkg/llm/)。联网运行前设置 `DEEPSEEK_API_KEY`(兼容旧名 `LLM_API_KEY`)。默认 `BaseURL=https://api.deepseek.com`、`Model=deepseek-v4-flash`，可用 `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` 覆盖。
 
 ## 验收
 

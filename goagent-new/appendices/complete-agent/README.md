@@ -15,10 +15,9 @@
 
 在 `goagent-new` 根目录：
 
-```powershell
-$env:LLM_API_KEY = "..."
-$env:LLM_BASE_URL = "https://api.deepseek.com"
-$env:LLM_MODEL = "供应商当前支持的模型名"
+```bash
+export DEEPSEEK_API_KEY="..."
+# 可选：默认 https://api.deepseek.com + deepseek-v4-flash
 
 go run ./appendices/complete-agent "12 * 8 + 4 等于多少?"
 go test ./appendices/complete-agent ./pkg/agent -v

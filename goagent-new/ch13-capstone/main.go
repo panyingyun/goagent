@@ -37,7 +37,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: go run ./ch13-capstone [flags] <question>")
 		os.Exit(2)
 	}
-	client := llm.NewHTTPClient(os.Getenv("LLM_API_KEY"), envOr("LLM_BASE_URL", "https://api.deepseek.com"), os.Getenv("LLM_MODEL"))
+	client := llm.NewHTTPClientFromEnv()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	answer, recorder, err := runCapstone(ctx, client, *root, strings.Join(flag.Args(), " "), *approve)

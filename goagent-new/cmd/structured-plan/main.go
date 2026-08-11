@@ -17,7 +17,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: go run ./cmd/structured-plan <goal>")
 		os.Exit(2)
 	}
-	client := llm.NewHTTPClient(os.Getenv("LLM_API_KEY"), envOr("LLM_BASE_URL", "https://api.deepseek.com"), os.Getenv("LLM_MODEL"))
+	client := llm.NewHTTPClientFromEnv()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	prompt := `把目标拆成 1 到 5 步，只输出一个 JSON 对象，不要代码围栏。格式：{"title":"...","steps":[{"id":"s1","task":"..."}]}`
@@ -36,15 +36,7 @@ func main() {
 	fmt.Println(string(data))
 }
 
-func envOr(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-
 func fatal(err error) {
 	fmt.Fprintln(os.Stderr, err)
 	os.Exit(1)
 }
-

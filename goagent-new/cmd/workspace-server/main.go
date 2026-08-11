@@ -36,14 +36,13 @@ func main() {
 	if token == "" {
 		log.Fatal("AGENT_API_TOKEN must be configured")
 	}
-	apiKey, model := os.Getenv("LLM_API_KEY"), os.Getenv("LLM_MODEL")
-	client := llm.NewHTTPClient(apiKey, envOr("LLM_BASE_URL", "https://api.deepseek.com"), model)
+	client := llm.NewHTTPClientFromEnv()
 	root := envOr("WORKSPACE_DIR", filepath.FromSlash("testdata/workspace"))
 	app, err := workspace.New(root, client, nil, trace.NewRecorder())
 	if err != nil {
 		log.Fatal(err)
 	}
-	h := &api{app: app, token: token, ready: apiKey != "" && model != "", limiter: newLimiter(30, time.Minute)}
+	h := &api{app: app, token: token, ready: client.Configured(), limiter: newLimiter(30, time.Minute)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET /readyz", h.handleReady)

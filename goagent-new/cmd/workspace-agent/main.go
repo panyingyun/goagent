@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	client := llm.NewHTTPClient(os.Getenv("LLM_API_KEY"), envOr("LLM_BASE_URL", "https://api.deepseek.com"), os.Getenv("LLM_MODEL"))
+	client := llm.NewHTTPClientFromEnv()
 	root := envOr("WORKSPACE_DIR", filepath.FromSlash("testdata/workspace"))
 	reader := bufio.NewReader(os.Stdin)
 	approver := agent.ApproverFunc(func(ctx context.Context, req agent.ApprovalRequest) (bool, error) {

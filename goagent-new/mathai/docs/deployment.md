@@ -4,9 +4,9 @@
 
 | 环境变量 | 必填 | 默认值 | 说明 |
 |---|---:|---|---|
-| `LLM_API_KEY` | 是 | — | LLM 密钥 |
-| `LLM_BASE_URL` | 否 | `https://api.deepseek.com` | OpenAI-compatible API 根地址 |
-| `LLM_MODEL` | 是 | — | 支持 tool calling 的模型 |
+| `DEEPSEEK_API_KEY` | 是 | — | DeepSeek API 密钥(兼容旧名 `LLM_API_KEY`) |
+| `DEEPSEEK_BASE_URL` | 否 | `https://api.deepseek.com` | API 根地址(兼容 `LLM_BASE_URL`) |
+| `DEEPSEEK_MODEL` | 否 | `deepseek-v4-flash` | 模型名(兼容 `LLM_MODEL`；也可用 `deepseek-v4-pro`) |
 | `MATHAI_API_TOKEN` | 生产必填 | 空 | `/api` Bearer Token |
 | `MATHAI_ALLOW_ORIGIN` | 否 | 空 | 唯一允许的跨域 Origin；同源部署留空 |
 | `MATHAI_DATA_FILE` | 否 | `data/sessions.json` | 会话文件路径 |

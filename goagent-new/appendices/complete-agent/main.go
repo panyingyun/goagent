@@ -27,13 +27,9 @@ const systemPrompt = `你是一个运行在 Go Agent 框架中的助手 DemoAgen
 不要编造工具结果。`
 
 func main() {
-	client := llm.NewHTTPClient(
-		os.Getenv("LLM_API_KEY"),
-		envOr("LLM_BASE_URL", "https://api.deepseek.com"),
-		os.Getenv("LLM_MODEL"),
-	)
-	if os.Getenv("LLM_API_KEY") == "" || os.Getenv("LLM_MODEL") == "" {
-		fmt.Fprintln(os.Stderr, "请设置 LLM_API_KEY 与 LLM_MODEL")
+	client := llm.NewHTTPClientFromEnv()
+	if !client.Configured() {
+		fmt.Fprintln(os.Stderr, "请设置 DEEPSEEK_API_KEY")
 		os.Exit(1)
 	}
 
@@ -86,13 +82,6 @@ func main() {
 	fmt.Println("\n=== 最终回答 ===")
 	fmt.Println(answer)
 	_ = recorder.Export(os.Stderr) // 可选:再导出 observer 事件(耗时/token)
-}
-
-func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
 }
 
 func fatal(err error) {

@@ -50,7 +50,7 @@ func (a *API) Handler(staticDirectory string) http.Handler {
 
 func (a *API) handleReady(w http.ResponseWriter, _ *http.Request) {
 	if !a.ready {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "reason": "LLM_API_KEY and LLM_MODEL are required"})
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "reason": "DEEPSEEK_API_KEY is required"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})

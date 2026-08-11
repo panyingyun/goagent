@@ -46,7 +46,7 @@ func (e *HTTPError) Retryable() bool {
 
 func (c *HTTPClient) Complete(ctx context.Context, in Request) (Response, error) {
 	if c.APIKey == "" || c.BaseURL == "" || c.Model == "" {
-		return Response{}, errors.New("LLM_API_KEY、LLM_BASE_URL 和 LLM_MODEL 必须配置")
+		return Response{}, errors.New("缺少 DEEPSEEK_API_KEY(或 LLM_API_KEY)")
 	}
 	payload := struct {
 		Model       string           `json:"model"`

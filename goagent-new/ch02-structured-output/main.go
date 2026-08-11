@@ -28,7 +28,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: go run ./ch02-structured-output <goal>")
 		os.Exit(2)
 	}
-	client := llm.NewHTTPClient(os.Getenv("LLM_API_KEY"), envOr("LLM_BASE_URL", "https://api.deepseek.com"), os.Getenv("LLM_MODEL"))
+	client := llm.NewHTTPClientFromEnv()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	plan, err := createPlan(ctx, client, strings.Join(os.Args[1:], " "))
@@ -38,12 +38,5 @@ func main() {
 	}
 	data, _ := json.MarshalIndent(plan, "", "  ")
 	fmt.Println(string(data))
-}
-
-func envOr(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
 

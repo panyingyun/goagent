@@ -4,7 +4,7 @@
 
 与旧课程不同，本课程采用一个贯穿项目：**Workspace Agent**。它从最小 LLM 调用开始，逐章增加结构化输出、工具调用、权限审批、记忆、流式响应、评估、持久化工作流、安全、检索、追踪和 HTTP 部署。最终项目使用的正是前面逐步构建的共享组件，而不是另写一个无关示例。
 
-> 课程代码默认使用 OpenAI-compatible Chat Completions 协议，但不硬编码具体模型。运行联网示例前，请根据当前供应商官方文档设置 `LLM_MODEL`。
+> 课程代码默认对接 DeepSeek（OpenAI-compatible Chat Completions）。运行联网示例前设置 `DEEPSEEK_API_KEY`；默认 `https://api.deepseek.com` + `deepseek-v4-flash`，可用环境变量覆盖。
 
 ## 学习目标
 
@@ -51,13 +51,14 @@
 
 ## 运行
 
-```powershell
+```bash
 cd goagent-new
-Copy-Item .env.example .env
-# 将 .env 中的值设置到当前终端，或直接设置环境变量：
-$env:LLM_API_KEY = "..."
-$env:LLM_BASE_URL = "https://api.deepseek.com"
-$env:LLM_MODEL = "供应商当前支持的模型名"
+cp .env.example .env
+# 将 .env 中的值 export 到当前终端，或直接设置：
+export DEEPSEEK_API_KEY="..."
+# 可选：
+# export DEEPSEEK_BASE_URL="https://api.deepseek.com"
+# export DEEPSEEK_MODEL="deepseek-v4-flash"
 
 go test ./...
 go run ./cmd/workspace-agent
@@ -65,8 +66,8 @@ go run ./cmd/workspace-agent
 
 启动 HTTP 服务：
 
-```powershell
-$env:AGENT_API_TOKEN = "local-dev-token"
+```bash
+export AGENT_API_TOKEN="local-dev-token"
 go run ./cmd/workspace-server
 ```
 
