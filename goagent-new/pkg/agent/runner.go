@@ -10,6 +10,7 @@ import (
 	"goagent-new/pkg/llm"
 )
 
+// Runner 驱动 LLM ↔ 工具循环,直到产出最终文本或超过轮次上限。
 type Runner struct {
 	LLM       llm.Client
 	Executor  *Executor

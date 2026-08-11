@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// Event 是推送给 SSE 客户端的单条事件。
 type Event struct {
 	Type string `json:"type"`
 	Data string `json:"data,omitempty"`

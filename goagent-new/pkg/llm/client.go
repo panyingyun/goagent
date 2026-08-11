@@ -14,6 +14,7 @@ import (
 
 const maxResponseBytes = 4 << 20
 
+// HTTPClient 通过 OpenAI-compatible HTTP API 发起 Chat Completions 请求。
 type HTTPClient struct {
 	APIKey  string
 	BaseURL string
@@ -30,6 +31,7 @@ func NewHTTPClient(apiKey, baseURL, model string) *HTTPClient {
 	}
 }
 
+// HTTPError 表示非 2xx 的 LLM HTTP 响应,便于按状态码判断是否可重试。
 type HTTPError struct {
 	StatusCode int
 	Body       string

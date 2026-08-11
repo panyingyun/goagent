@@ -10,6 +10,7 @@ import (
 	"goagent-new/pkg/graph"
 )
 
+// Outcome 是系统评估中一次图运行的观测结果。
 type Outcome struct {
 	Path       []string          `json:"path"`
 	State      map[string]string `json:"state"`
@@ -19,6 +20,7 @@ type Outcome struct {
 	Error      string            `json:"error,omitempty"`
 }
 
+// Case 是系统级用例(输入、故障注入与期望路径/状态)。
 type Case struct {
 	Name          string            `json:"name"`
 	Input         map[string]string `json:"input"`
@@ -30,8 +32,10 @@ type Case struct {
 	MaxCost       int               `json:"max_cost,omitempty"`
 }
 
+// RunFunc 执行单条系统评估用例。
 type RunFunc func(context.Context, map[string]string, map[string]int) Outcome
 
+// Result 是单条系统评估用例的结论。
 type Result struct {
 	Case    string  `json:"case"`
 	Passed  bool    `json:"passed"`
@@ -39,6 +43,7 @@ type Result struct {
 	Outcome Outcome `json:"outcome"`
 }
 
+// Report 汇总一批用例的通过率、步数与成本。
 type Report struct {
 	Results      []Result `json:"results"`
 	PassRate     float64  `json:"pass_rate"`
@@ -47,6 +52,7 @@ type Report struct {
 	Violations   int      `json:"violations"`
 }
 
+// Comparison 对比基线与候选报告的回归/改进与成本差。
 type Comparison struct {
 	Regressions  []string `json:"regressions"`
 	Improvements []string `json:"improvements"`
@@ -155,6 +161,7 @@ func evaluate(testCase Case, outcome Outcome) string {
 	return ""
 }
 
+// faultInjector 按节点剩余次数注入故障,用于故障注入评估。
 type faultInjector struct {
 	mu        sync.Mutex
 	remaining map[string]int

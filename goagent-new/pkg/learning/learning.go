@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// Status 表示经验条目在学习闭环中的生命周期状态。
 type Status string
 
 const (
@@ -23,6 +24,7 @@ const (
 	Retired   Status = "retired"
 )
 
+// Risk 表示推广该经验的风险等级。
 type Risk string
 
 const (
@@ -30,6 +32,7 @@ const (
 	HighRisk Risk = "high"
 )
 
+// Feedback 是对某次任务结果的人工或自动反馈。
 type Feedback struct {
 	TaskID    string    `json:"task_id"`
 	Outcome   string    `json:"outcome"`
@@ -39,6 +42,7 @@ type Feedback struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Experience 是可检索、可验证并可能被晋级的经验条目。
 type Experience struct {
 	ID         string     `json:"id"`
 	TaskType   string     `json:"task_type"`
@@ -57,6 +61,7 @@ type Experience struct {
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 }
 
+// Review 汇总回归评审结果(通过数、总数、回归数)。
 type Review struct {
 	Passed      int `json:"passed"`
 	Total       int `json:"total"`
@@ -70,12 +75,14 @@ func (r Review) PassRate() float64 {
 	return float64(r.Passed) / float64(r.Total)
 }
 
+// Gate 是经验从候选晋级到已验证所需的阈值门槛。
 type Gate struct {
 	MinEvidence   int
 	MinConfidence float64
 	MinPassRate   float64
 }
 
+// Store 持久化经验条目,并支持提出/验证/晋级/检索。
 type Store struct {
 	mu    sync.RWMutex
 	path  string

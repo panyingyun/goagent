@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Preference 是一条可持久化的用户偏好(键值 + 来源 + 更新时间)。
 type Preference struct {
 	Key       string    `json:"key"`
 	Value     string    `json:"value"`
@@ -17,6 +18,7 @@ type Preference struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Store 是基于本地 JSON 文件的偏好存储器。
 type Store struct {
 	mu    sync.Mutex
 	path  string
@@ -115,4 +117,3 @@ func writeFile(path string, data []byte, perm os.FileMode) error {
 	}
 	return os.Rename(tmpName, path)
 }
-

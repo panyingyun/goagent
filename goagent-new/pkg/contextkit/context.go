@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 )
 
+// Trust 标记上下文来源是否可信(影响注入与渲染策略)。
 type Trust string
 
 const (
@@ -17,6 +18,7 @@ const (
 	Untrusted Trust = "untrusted"
 )
 
+// Source 是一条待组装进提示词的上下文来源。
 type Source struct {
 	ID       string `json:"id"`
 	Kind     string `json:"kind"`
@@ -26,12 +28,14 @@ type Source struct {
 	Required bool   `json:"required"`
 }
 
+// Item 是选中后的上下文条目(含相关度与渲染文本)。
 type Item struct {
 	Source    Source `json:"source"`
 	Relevance int    `json:"relevance"`
 	Rendered  string `json:"rendered"`
 }
 
+// Bundle 是按预算裁剪后的上下文组装结果。
 type Bundle struct {
 	Text        string   `json:"text"`
 	Items       []Item   `json:"items"`
@@ -40,6 +44,7 @@ type Bundle struct {
 	BudgetRunes int      `json:"budget_runes"`
 }
 
+// Assembler 按相关度与预算从 Source 列表组装 Bundle。
 type Assembler struct {
 	MaxRunes int
 	MaxItems int

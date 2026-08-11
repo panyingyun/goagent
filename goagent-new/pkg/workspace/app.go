@@ -22,6 +22,7 @@ const systemPrompt = `你是 Workspace Agent。你只能通过已提供工具读
 涉及写入时必须调用 write_note，由运行时向用户申请批准。不要声称已经执行未调用的工具。
 回答尽量简洁；引用搜索结果时写出来源文档 ID。`
 
+// App 组装 Workspace Agent(工具、检索、trace)并处理对话。
 type App struct {
 	runner   agent.Runner
 	recorder *trace.Recorder

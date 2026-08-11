@@ -16,6 +16,7 @@ import (
 	"goagent-new/pkg/llm"
 )
 
+// Executor 注册并执行工具,负责审批、缓存、幂等与并行安全调度。
 type Executor struct {
 	mu         sync.Mutex
 	tools      map[string]Tool

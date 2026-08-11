@@ -6,17 +6,20 @@ import (
 	"slices"
 )
 
+// ToolUse 记录评估中观察到的一次工具调用。
 type ToolUse struct {
 	Name      string
 	Arguments string
 }
 
+// Outcome 是被测 Agent 对单条输入的运行结果。
 type Outcome struct {
 	Answer string
 	Tools  []ToolUse
 	State  map[string]string
 }
 
+// Case 是一条回归用例(期望工具轨迹与状态断言)。
 type Case struct {
 	Name          string
 	Input         string
@@ -24,8 +27,10 @@ type Case struct {
 	ExpectedState map[string]string
 }
 
+// RunFunc 执行单条用例并返回 Outcome。
 type RunFunc func(context.Context, string) (Outcome, error)
 
+// Result 是单条用例的通过/失败结论。
 type Result struct {
 	Case   string
 	Passed bool
@@ -75,4 +80,3 @@ func PassRate(results []Result) float64 {
 	}
 	return float64(passed) / float64(len(results))
 }
-

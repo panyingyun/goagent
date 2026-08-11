@@ -265,6 +265,7 @@ func within(base, target string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
+// expressionParser 是 calculator 工具的简易算术表达式解析器。
 type expressionParser struct {
 	s   string
 	pos int

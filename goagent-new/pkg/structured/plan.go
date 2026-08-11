@@ -8,11 +8,13 @@ import (
 	"strings"
 )
 
+// Step 是任务计划中的单个步骤。
 type Step struct {
 	ID   string `json:"id"`
 	Task string `json:"task"`
 }
 
+// TaskPlan 是模型应产出的结构化任务计划(标题 + 有限步骤)。
 type TaskPlan struct {
 	Title string `json:"title"`
 	Steps []Step `json:"steps"`
@@ -47,4 +49,3 @@ func DecodeTaskPlan(content string) (TaskPlan, error) {
 	}
 	return plan, nil
 }
-

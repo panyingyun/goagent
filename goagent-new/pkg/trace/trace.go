@@ -12,6 +12,7 @@ import (
 	"goagent-new/pkg/agent"
 )
 
+// Span 是一次命名操作的时间区间记录(可嵌套 parent)。
 type Span struct {
 	ID       string         `json:"id"`
 	ParentID string         `json:"parent_id,omitempty"`
@@ -22,13 +23,15 @@ type Span struct {
 	Error    string         `json:"error,omitempty"`
 }
 
+// spanKey 用于把当前 Span 挂到 context 上。
 type spanKey struct{}
 
+// Recorder 收集 Span 与 agent.Event,支持快照与 JSON 导出。
 type Recorder struct {
-	mu      sync.Mutex
-	nextID  atomic.Uint64
-	spans   []*Span
-	events  []agent.Event
+	mu     sync.Mutex
+	nextID atomic.Uint64
+	spans  []*Span
+	events []agent.Event
 }
 
 func NewRecorder() *Recorder { return &Recorder{} }

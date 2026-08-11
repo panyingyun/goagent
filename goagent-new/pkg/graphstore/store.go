@@ -12,6 +12,7 @@ import (
 	"goagent-new/pkg/graph"
 )
 
+// FileStore 用本地文件保存图检查点,并以 JSONL 追加事件。
 type FileStore struct {
 	mu             sync.Mutex
 	CheckpointPath string
@@ -106,6 +107,7 @@ func (s *FileStore) ReadEvents() ([]graph.Event, error) {
 	return events, scanner.Err()
 }
 
+// Migration 把图状态从某个版本迁移到下一版本。
 type Migration func(*graph.State) error
 
 func Migrate(state *graph.State, targetVersion int, migrations map[int]Migration) error {

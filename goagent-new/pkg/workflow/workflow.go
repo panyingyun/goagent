@@ -12,6 +12,7 @@ import (
 
 const CurrentVersion = 1
 
+// Status 表示工作流步骤的执行状态。
 type Status string
 
 const (
@@ -22,15 +23,17 @@ const (
 	Failed          Status = "failed"
 )
 
+// Step 是工作流中的单个可检查点步骤。
 type Step struct {
-	ID             string `json:"id"`
-	Status         Status `json:"status"`
-	RequiresApproval bool `json:"requires_approval,omitempty"`
-	IdempotencyKey string `json:"idempotency_key,omitempty"`
-	Output         string `json:"output,omitempty"`
-	Error          string `json:"error,omitempty"`
+	ID               string `json:"id"`
+	Status           Status `json:"status"`
+	RequiresApproval bool   `json:"requires_approval,omitempty"`
+	IdempotencyKey   string `json:"idempotency_key,omitempty"`
+	Output           string `json:"output,omitempty"`
+	Error            string `json:"error,omitempty"`
 }
 
+// State 是可持久化的工作流运行状态。
 type State struct {
 	Version       int             `json:"version"`
 	ID            string          `json:"id"`
@@ -41,12 +44,15 @@ type State struct {
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
+// Handler 执行某个步骤并返回输出文本。
 type Handler func(context.Context, *State, *Step) (string, error)
 
+// Approver 在 RequiresApproval 步骤上决定是否继续。
 type Approver interface {
 	Approve(context.Context, State, Step) (bool, error)
 }
 
+// Engine 按步骤推进工作流,并在关键节点写入检查点。
 type Engine struct {
 	Checkpoint string
 	Handlers   map[string]Handler

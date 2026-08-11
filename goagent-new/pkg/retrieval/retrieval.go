@@ -6,19 +6,22 @@ import (
 	"unicode"
 )
 
+// Document 是可检索的文本文档。
 type Document struct {
 	ID      string
 	Content string
 }
 
+// Hit 是一次检索命中(文档 + 相关度分数)。
 type Hit struct {
 	Document Document
 	Score    float64
 }
 
+// KeywordIndex 是基于词/二元组交集的简易关键词索引。
 type KeywordIndex struct {
-	docs   []Document
-	terms  []map[string]struct{}
+	docs  []Document
+	terms []map[string]struct{}
 }
 
 func NewKeywordIndex(docs []Document) *KeywordIndex {
@@ -81,4 +84,3 @@ func tokenize(text string) map[string]struct{} {
 	}
 	return terms
 }
-

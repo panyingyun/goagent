@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Status 表示图运行的生命周期状态。
 type Status string
 
 const (
@@ -17,6 +18,7 @@ const (
 	Failed    Status = "failed"
 )
 
+// State 是图执行的可检查点状态(数据、输出、路径与幂等键)。
 type State struct {
 	GraphVersion  int               `json:"graph_version"`
 	RunID         string            `json:"run_id"`
@@ -31,16 +33,23 @@ type State struct {
 	UpdatedAt     time.Time         `json:"updated_at"`
 }
 
+// Handler 执行某个图节点并返回输出。
 type Handler func(context.Context, *State) (string, error)
+
+// Predicate 判断某条边在当前状态下是否可走。
 type Predicate func(State) bool
+
+// KeyFunc 为节点计算幂等键,用于恢复时跳过已完成副作用。
 type KeyFunc func(State) string
 
+// Node 是图中的一个可执行节点。
 type Node struct {
 	ID             string
 	Run            Handler
 	IdempotencyKey KeyFunc
 }
 
+// Edge 是带可选条件的有向边。
 type Edge struct {
 	From string
 	To   string
@@ -48,6 +57,7 @@ type Edge struct {
 	When Predicate
 }
 
+// Definition 描述一张可验证、可执行的图(入口、节点与边)。
 type Definition struct {
 	Name    string
 	Version int
@@ -56,6 +66,7 @@ type Definition struct {
 	Edges   []Edge
 }
 
+// Event 是图执行产生的事件日志条目。
 type Event struct {
 	RunID  string    `json:"run_id"`
 	Step   int       `json:"step"`
@@ -66,14 +77,17 @@ type Event struct {
 	At     time.Time `json:"at"`
 }
 
+// Checkpointer 持久化图状态。
 type Checkpointer interface {
 	Save(State) error
 }
 
+// EventSink 追加图事件日志。
 type EventSink interface {
 	Append(Event) error
 }
 
+// Engine 按定义逐步执行图,并可选写入检查点与事件。
 type Engine struct {
 	Definition   Definition
 	MaxSteps     int
