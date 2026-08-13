@@ -9,8 +9,6 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -32,7 +30,7 @@ func NewAPI(store *Store, processor ChatProcessor, traces *TraceStore, token, al
 	return &API{store: store, agent: processor, traces: traces, token: token, allowOrigin: allowOrigin, ready: ready, limiter: newRateLimiter(60, time.Minute)}
 }
 
-func (a *API) Handler(staticDirectory string) http.Handler {
+func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -44,7 +42,6 @@ func (a *API) Handler(staticDirectory string) http.Handler {
 	mux.Handle("DELETE /api/sessions/{id}", a.protect(http.HandlerFunc(a.deleteSession)))
 	mux.Handle("POST /api/sessions/{id}/chat", a.protect(http.HandlerFunc(a.chat)))
 	mux.Handle("GET /api/traces/{id}", a.protect(http.HandlerFunc(a.getTrace)))
-	mux.Handle("/", spaHandler(staticDirectory))
 	return a.cors(mux)
 }
 
@@ -227,37 +224,6 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 
 func writeAPIError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
-}
-
-func spaHandler(directory string) http.Handler {
-	files := http.FileServer(http.Dir(directory))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			http.NotFound(w, r)
-			return
-		}
-		cleaned := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
-		if cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-			http.NotFound(w, r)
-			return
-		}
-		if cleaned == "." {
-			cleaned = "index.html"
-		}
-		candidate := filepath.Join(directory, cleaned)
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-			files.ServeHTTP(w, r)
-			return
-		}
-		index := filepath.Join(directory, "index.html")
-		if _, err := os.Stat(index); err != nil {
-			writeAPIError(w, http.StatusNotFound, "frontend has not been built")
-			return
-		}
-		w.Header().Set("Cache-Control", "no-cache")
-		http.ServeFile(w, r, index)
-	})
 }
 
 type rateLimiter struct {

@@ -40,9 +40,9 @@ flowchart LR
 
 只有会话成功提交后，trace 才放入有界内存 Store。Trace 用于近期调试，不是永久审计日志。生产环境可导出到 OpenTelemetry 或日志平台。
 
-### 单容器同源部署
+### 分容器同源部署
 
-Go 同时托管 `/api` 和前端静态文件，浏览器默认不需要 CORS。`MATHAI_ALLOW_ORIGIN` 只服务于明确分离的开发或部署拓扑，不允许通配符。
+Compose 将前端 Nginx 与后端 Go API 分成两个容器。浏览器只访问前端端口；Nginx 反向代理 `/api`，因此默认仍是同源，不需要 CORS。`MATHAI_ALLOW_ORIGIN` 只服务于明确分离的开发或部署拓扑，不允许通配符。本地开发由 Vite 托管前端，并把 `/api` 代理到后端。
 
 ## 可扩展点
 

@@ -1,17 +1,35 @@
 services:
-  mathai:
+  backend:
     build:
-      context: ..
-      dockerfile: mathai/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - .env
-    ports:
-      - "8080:8080"
     volumes:
       - mathai-data:/app/data
     restart: unless-stopped
     read_only: true
     tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/log/nginx
+      - /var/run
+      - /run
       - /tmp
     security_opt:
       - no-new-privileges:true

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"goagent-new/pkg/llm"
+	"mathai/pkg/llm"
 )
 
 type scriptedClient struct {

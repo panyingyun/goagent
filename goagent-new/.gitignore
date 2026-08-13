@@ -8,3 +8,7 @@ ch00-go-foundations/ch00-go-foundations
 ch01-llm-api/ch01-llm-api
 ch02-structured-output/ch02-structured-output
 ch03-tool-calling/ch03-tool-calling
+ch04-tool-runtime/ch04-tool-runtime
+ch05-memory/ch05-memory
+ch06-streaming/ch06-streaming
+ch07-evaluation/ch07-evaluation

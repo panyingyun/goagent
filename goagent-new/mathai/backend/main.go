@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"goagent-new/pkg/llm"
+	"mathai/pkg/llm"
 )
 
 func main() {
@@ -21,9 +21,13 @@ func main() {
 	}
 	application := NewAPI(store, NewMathAgent(client), NewTraceStore(200), os.Getenv("MATHAI_API_TOKEN"), os.Getenv("MATHAI_ALLOW_ORIGIN"), client.Configured())
 	server := &http.Server{
-		Addr: ":" + envOr("PORT", "8080"), Handler: application.Handler(envOr("MATHAI_STATIC_DIR", "frontend/dist")),
-		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 80 * time.Second,
-		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10,
+		Addr:              ":" + envOr("PORT", "8080"),
+		Handler:           application.Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      80 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    16 << 10,
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

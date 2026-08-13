@@ -29,7 +29,7 @@ func TestSessionChatAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	api := NewAPI(store, fakeProcessor{}, NewTraceStore(10), "", "", true)
-	server := httptest.NewServer(api.Handler(t.TempDir()))
+	server := httptest.NewServer(api.Handler())
 	defer server.Close()
 
 	created := requestJSON[Session](t, http.MethodPost, server.URL+"/api/sessions", map[string]string{"title": "三角函数"}, http.StatusCreated)
