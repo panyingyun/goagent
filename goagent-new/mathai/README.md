@@ -8,6 +8,7 @@
 cd mathai/backend
 export DEEPSEEK_API_KEY="你的密钥"
 go test ./... -v
+go run . -eval
 go run .
 
 # 另开终端
@@ -27,6 +28,7 @@ docker compose up --build
 Docker 访问 `http://localhost:8080`。
 
 - [`backend/math_agent.go`](backend/math_agent.go)：读工具、写工具、审批与 trace；
+- [`backend/eval.go`](backend/eval.go)：读取 `testdata/eval-cases.json`，用 `pkg/eval` 核对补丁轨迹和 GraphState；
 - [`backend/domain.go`](backend/domain.go)：`GraphPatch` 确定性校验，模型不能直接覆盖存储；
 - [`frontend/src/components/GraphViewer.tsx`](frontend/src/components/GraphViewer.tsx)：表达式用 mathjs，不使用 `eval`；
 - [`docs/course-guide.md`](docs/course-guide.md)：一次聊天请求的完整链路。

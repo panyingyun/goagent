@@ -11,7 +11,9 @@ Agent 的回答流畅不代表任务成功。MathAI 至少评估四层：
 
 ## 基线案例
 
-`testdata/eval-cases.json` 包含建议的在线评估输入和期望状态。在线模型具有不确定性，因此不要比较完整回答字符串，应比较：
+`testdata/eval-cases.json` 由 [`backend/eval.go`](../backend/eval.go) 加载。`go run . -eval` 需要 `DEEPSEEK_API_KEY`，用真实模型跑案例：连续多次 `add_equation` 视为 `replace_equations`，期望操作为实际轨迹的子序列，门槛 90%。
+
+在线模型具有不确定性，因此不要比较完整回答字符串，应比较：
 
 - 是否调用预期工具；
 - 工具参数是否通过 schema 与领域校验；
@@ -26,6 +28,7 @@ Agent 的回答流畅不代表任务成功。MathAI 至少评估四层：
 - 函数新增、更新和删除生命周期；
 - Store 持久化和过期版本冲突；
 - scripted LLM 的真实 Runner/Executor 工具循环；
+- `testdata/eval-cases.json` 经 `pkg/eval` 核对补丁轨迹与最终 GraphState；
 - 工具未知字段拒绝；
 - 会话、聊天和 trace API 链路。
 

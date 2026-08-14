@@ -61,7 +61,7 @@ Canvas 足以展示一元函数，也让课程代码保留核心算法：世界�
 1. 给 `GraphPatch` 增加 `duplicate_equation`，先写失败测试再实现；
 2. 为前端加入拖拽和滚轮缩放，并通过 API 保存视口；
 3. 将内存 trace store 换成带 TTL 的外部存储；
-4. 用 `testdata/eval-cases.json` 写一个离线评估器，评分维度包括工具选择和最终状态；
+4. 阅读 `backend/eval.go`，用 `go test -run Eval` 或 `go run . -eval` 跑 `testdata/eval-cases.json`；
 5. 增加真实用户审批：模型建议清空图形时，在 UI 中展示待审批操作。
 
 ## 6. 不应继续堆叠的内容

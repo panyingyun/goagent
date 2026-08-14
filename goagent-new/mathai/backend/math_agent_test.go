@@ -2,26 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"mathai/pkg/llm"
 )
-
-type scriptedClient struct {
-	responses []llm.Response
-	requests  []llm.Request
-}
-
-func (c *scriptedClient) Complete(_ context.Context, request llm.Request) (llm.Response, error) {
-	c.requests = append(c.requests, request)
-	if len(c.responses) == 0 {
-		return llm.Response{}, errors.New("no scripted response")
-	}
-	response := c.responses[0]
-	c.responses = c.responses[1:]
-	return response, nil
-}
 
 func TestMathAgentUsesGraphPatchTool(t *testing.T) {
 	t.Parallel()
@@ -62,7 +46,7 @@ func TestMathAgentUsesGraphPatchTool(t *testing.T) {
 func TestGraphPatchToolRejectsUnknownFields(t *testing.T) {
 	t.Parallel()
 	state := DefaultGraphState()
-	_, err := graphPatchTool(&state).Run(context.Background(), []byte(`{"operation":"clear_graph","unexpected":true}`))
+	_, err := graphPatchTool(&state, nil).Run(context.Background(), []byte(`{"operation":"clear_graph","unexpected":true}`))
 	if err == nil {
 		t.Fatal("unknown field unexpectedly accepted")
 	}

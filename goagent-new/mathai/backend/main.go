@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -14,7 +15,17 @@ import (
 )
 
 func main() {
+	evalOnly := flag.Bool("eval", false, "run testdata/eval-cases.json and exit")
+	flag.Parse()
+
 	client := llm.NewHTTPClientFromEnv()
+	if *evalOnly {
+		if err := runEvalCommand(client); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	store, err := OpenStore(envOr("MATHAI_DATA_FILE", "data/sessions.json"))
 	if err != nil {
 		log.Fatal(err)

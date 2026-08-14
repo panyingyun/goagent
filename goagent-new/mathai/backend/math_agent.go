@@ -27,10 +27,11 @@ const mathSystemPrompt = `你是 MathAI，一个函数可视化与分析助手�
 可用 operation：replace_equations、add_equation、update_equation、remove_equation、set_viewport、set_settings、set_analysis、clear_graph。`
 
 type ChatResult struct {
-	Answer  string
-	State   GraphState
-	TraceID string
-	Trace   TraceRecord
+	Answer     string
+	State      GraphState
+	Operations []string
+	TraceID    string
+	Trace      TraceRecord
 }
 
 type ChatProcessor interface {
@@ -60,6 +61,7 @@ func (m *MathAgent) Process(ctx context.Context, session Session, userText strin
 	defer func() { finish(finalErr) }()
 
 	working := cloneGraphState(session.GraphState)
+	var operations []string
 	executor := agent.NewExecutor()
 	executor.Observer = recorder
 	executor.Approver = agent.ApproverFunc(func(_ context.Context, request agent.ApprovalRequest) (bool, error) {
@@ -68,7 +70,7 @@ func (m *MathAgent) Process(ctx context.Context, session Session, userText strin
 	if err := executor.Register(graphStateTool(&working)); err != nil {
 		return result, err
 	}
-	if err := executor.Register(graphPatchTool(&working)); err != nil {
+	if err := executor.Register(graphPatchTool(&working, &operations)); err != nil {
 		return result, err
 	}
 
@@ -80,7 +82,7 @@ func (m *MathAgent) Process(ctx context.Context, session Session, userText strin
 	finish(nil)
 	spans, events := recorder.Snapshot()
 	result = ChatResult{
-		Answer: strings.TrimSpace(answer), State: working, TraceID: traceID,
+		Answer: strings.TrimSpace(answer), State: working, Operations: operations, TraceID: traceID,
 		Trace: TraceRecord{ID: traceID, SessionID: session.ID, CreatedAt: time.Now().UTC(), Spans: spans, Events: events},
 	}
 	return result, nil
@@ -115,7 +117,7 @@ func graphStateTool(state *GraphState) agent.Tool {
 	}
 }
 
-func graphPatchTool(state *GraphState) agent.Tool {
+func graphPatchTool(state *GraphState, operations *[]string) agent.Tool {
 	return agent.Tool{
 		Name: "apply_graph_patch", Description: "对当前会话的图形状态应用一个经过校验的原子补丁。",
 		Parameters: graphPatchSchema(), SideEffect: agent.SideEffectWrite, Idempotent: true, Timeout: 3 * time.Second,
@@ -129,6 +131,9 @@ func graphPatchTool(state *GraphState) agent.Tool {
 				return "", err
 			}
 			*state = next
+			if operations != nil {
+				*operations = append(*operations, patch.Operation)
+			}
 			data, err := json.Marshal(map[string]any{"ok": true, "operation": patch.Operation, "graphState": next})
 			return string(data), err
 		},
