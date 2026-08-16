@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Activity, LineChart, MoreHorizontal, Paperclip, SendHorizontal, Waves } from 'lucide-react'
 import { BrandLogo } from './BrandLogo'
+import { Markdown } from './Markdown'
 import { useStore } from '../store'
 
 const QUICK = [
@@ -103,7 +104,7 @@ export function ChatPanel() {
                     </span>
                   </div>
                   <div className="max-w-[90%] space-y-3 rounded-2xl rounded-tl-sm border border-outline bg-white px-5 py-4 text-sm leading-6 shadow-soft">
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    <Markdown>{m.content}</Markdown>
                     {m.traceId && (
                       <button
                         type="button"

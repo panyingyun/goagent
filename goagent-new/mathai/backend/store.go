@@ -174,12 +174,12 @@ func cloneSession(session Session) Session {
 	return session
 }
 
-// titleFromFirstMessage 用第一条用户消息的前 10 个字作为会话标题。
+// titleFromFirstMessage 用第一条用户消息的前 50 个字作为会话标题。
 func titleFromFirstMessage(content string) string {
 	content = strings.Join(strings.Fields(content), " ")
 	runes := []rune(content)
-	if len(runes) > 10 {
-		runes = runes[:10]
+	if len(runes) > 50 {
+		runes = runes[:50]
 	}
 	if len(runes) == 0 {
 		return "新的数学探索"
