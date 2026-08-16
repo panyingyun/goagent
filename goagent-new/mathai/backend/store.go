@@ -117,6 +117,9 @@ func (s *Store) CommitChat(id string, expectedVersion int64, user, assistant Mes
 		return Session{}, ErrConflict
 	}
 	previous := cloneSession(session)
+	if len(session.Messages) == 0 {
+		session.Title = titleFromFirstMessage(user.Content)
+	}
 	session.Messages = append(session.Messages, user, assistant)
 	session.GraphState = cloneGraphState(state)
 	session.Version++
@@ -169,4 +172,17 @@ func cloneSession(session Session) Session {
 	session.Messages = append(make([]Message, 0, len(session.Messages)), session.Messages...)
 	session.GraphState = cloneGraphState(session.GraphState)
 	return session
+}
+
+// titleFromFirstMessage 用第一条用户消息的前 10 个字作为会话标题。
+func titleFromFirstMessage(content string) string {
+	content = strings.Join(strings.Fields(content), " ")
+	runes := []rune(content)
+	if len(runes) > 10 {
+		runes = runes[:10]
+	}
+	if len(runes) == 0 {
+		return "新的数学探索"
+	}
+	return string(runes)
 }
