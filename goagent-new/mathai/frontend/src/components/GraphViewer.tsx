@@ -2,7 +2,8 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 import { Coordinates, Mafs, Plot } from 'mafs'
 import 'mafs/core.css'
 import { toPng } from 'html-to-image'
-import { compileEquation } from '../plot'
+import { Pause, Play, RotateCcw } from 'lucide-react'
+import { compileEquation, hasAnimationParam } from '../plot'
 import type { Equation, GraphSettings, Viewport } from '../types'
 
 export type GraphViewerHandle = {
@@ -14,6 +15,33 @@ type Props = {
   equations: Equation[]
   viewport: Viewport
   settings: GraphSettings
+}
+
+/** 动画参数 t 的循环周期（弧度），t 在 [0, 2π) 内循环，适合 sin/cos 这类周期函数。 */
+const ANIMATION_PERIOD = 2 * Math.PI
+
+/**
+ * 轻量动画时钟：播放时用 requestAnimationFrame 累加相位并循环。
+ * 不使用 Mafs 的 useStopwatch，因为它没有真·暂停（stop 会重置到 0），
+ * 且其 setTime 内部会乘以 1000。这里暂停时 phase 保持不变，恢复后继续。
+ */
+function useAnimationClock(playing: boolean) {
+  const [phase, setPhase] = useState(0)
+  useEffect(() => {
+    if (!playing) return
+    let raf = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000
+      last = now
+      setPhase((p) => (p + dt) % ANIMATION_PERIOD)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing])
+  const reset = () => setPhase(0)
+  return { phase, reset }
 }
 
 export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphViewer(
@@ -36,8 +64,12 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
     return () => observer.disconnect()
   }, [])
 
+  const animated = useMemo(() => equations.some((e) => hasAnimationParam(e.expression)), [equations])
+  const [playing, setPlaying] = useState(true)
+  const { phase, reset } = useAnimationClock(playing && animated)
+
   const compiled = useMemo(() => {
-    const map = new Map<string, (x: number) => number>()
+    const map = new Map<string, (x: number, t?: number) => number>()
     for (const equation of equations) {
       map.set(equation.id, compileEquation(equation.expression))
     }
@@ -86,15 +118,18 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
               xAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
               yAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
             />
-            {visible.map((equation) => (
-              <Plot.OfX
-                key={equation.id}
-                y={compiled.get(equation.id) ?? (() => NaN)}
-                color={equation.color}
-                weight={equation.lineWidth || 2}
-                opacity={1}
-              />
-            ))}
+            {visible.map((equation) => {
+              const fn = compiled.get(equation.id)
+              return (
+                <Plot.OfX
+                  key={equation.id}
+                  y={(x) => (fn ? fn(x, phase) : NaN)}
+                  color={equation.color}
+                  weight={equation.lineWidth || 2}
+                  opacity={1}
+                />
+              )
+            })}
           </Mafs>
         )}
       </div>
@@ -106,6 +141,26 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
               {equation.label || equation.expression}
             </span>
           ))}
+        </div>
+      )}
+      {animated && (
+        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1 rounded-lg border border-outline bg-white/85 px-1.5 py-1 shadow-soft backdrop-blur-sm">
+          <button
+            type="button"
+            title={playing ? '暂停动画' : '播放动画'}
+            onClick={() => setPlaying((p) => !p)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+          >
+            {playing ? <Pause className="h-4 w-4" strokeWidth={1.75} /> : <Play className="h-4 w-4" strokeWidth={1.75} />}
+          </button>
+          <button
+            type="button"
+            title="重置动画"
+            onClick={reset}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={1.75} />
+          </button>
         </div>
       )}
     </div>

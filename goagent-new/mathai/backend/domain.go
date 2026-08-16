@@ -19,7 +19,7 @@ var (
 )
 
 var allowedIdentifiers = map[string]bool{
-	"x": true, "sin": true, "cos": true, "tan": true,
+	"x": true, "t": true, "sin": true, "cos": true, "tan": true,
 	"exp": true, "log": true, "sqrt": true, "abs": true,
 	"pow": true, "pi": true, "e": true,
 }
