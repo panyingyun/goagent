@@ -34,6 +34,11 @@
   --grid-line-subdivision-color: #eef0f6;
 }
 
+/* 坐标轴刻度（数字与 π 等）用等宽字体，中文仍保持 LXGWWenKai */
+.MafsView .mafs-axis text {
+  font-family: var(--font-mono);
+}
+
 html,
 body,
 #root {

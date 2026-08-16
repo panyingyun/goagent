@@ -14,7 +14,7 @@ import {
 import { useStore } from '../store'
 import { GraphViewer, type GraphViewerHandle } from './GraphViewer'
 import { MathTex } from './MathTex'
-import type { Equation, GraphSettings, Viewport } from '../types'
+import type { Equation, GraphSettings, PiLabelMode, Viewport } from '../types'
 
 type Tab = 'equations' | 'params' | 'analysis'
 
@@ -31,6 +31,7 @@ export function ResultPanel() {
   const [viewport, setViewport] = useState<Viewport | null>(null)
   const [baseViewport, setBaseViewport] = useState<Viewport | null>(null)
   const [settings, setSettings] = useState<GraphSettings | null>(null)
+  const [piLabelMode, setPiLabelMode] = useState<PiLabelMode>('auto')
 
   const graph = session?.graphState
 
@@ -90,7 +91,7 @@ export function ResultPanel() {
       <ViewerHeader onExport={() => void graphRef.current?.exportPNG()} />
 
       <div className="relative min-h-0 flex-[7] bg-white p-2">
-        <GraphViewer ref={graphRef} equations={equations} viewport={viewport} settings={settings} />
+        <GraphViewer ref={graphRef} equations={equations} viewport={viewport} settings={settings} piLabelMode={piLabelMode} />
         <GraphToolbar
           onZoomIn={() => zoomBy(0.8)}
           onZoomOut={() => zoomBy(1.25)}
@@ -242,6 +243,31 @@ export function ResultPanel() {
                   on={settings.showLegend}
                   onToggle={() => setSettings({ ...settings, showLegend: !settings.showLegend })}
                 />
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm text-ink">横轴刻度</span>
+                  <div className="flex overflow-hidden rounded-lg border border-outline">
+                    {(
+                      [
+                        ['auto', '自动'],
+                        ['pi', 'π'],
+                        ['integer', '整数'],
+                      ] as const
+                    ).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setPiLabelMode(mode)}
+                        className={`px-3 py-1.5 text-sm transition ${
+                          piLabelMode === mode
+                            ? 'bg-primary text-on-primary'
+                            : 'bg-white text-muted hover:text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}

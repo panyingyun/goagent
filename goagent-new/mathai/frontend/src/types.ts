@@ -24,6 +24,7 @@ export type Equation = {
 
 export type Viewport = { xMin: number; xMax: number; yMin: number; yMax: number };
 export type GraphSettings = { showGrid: boolean; showAxes: boolean; showLegend: boolean; sampleCount: number };
+export type PiLabelMode = 'auto' | 'integer' | 'pi';
 export type GraphAnalysis = { summary: string; highlights: string[] };
 
 export type GraphState = {

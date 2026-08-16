@@ -20,3 +20,12 @@
   font-weight: 600;
   src: url('/fonts/jetbrains/jetbrains-mono-latin-600-normal.woff2') format('woff2');
 }
+/* 希腊字母（含 π），供坐标轴刻度等英文/数学符号使用 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('/fonts/jetbrains/jetbrains-mono-greek-400-normal.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}

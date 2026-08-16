@@ -3,8 +3,8 @@ import { Coordinates, Mafs, Plot } from 'mafs'
 import 'mafs/core.css'
 import { toPng } from 'html-to-image'
 import { Pause, Play, RotateCcw } from 'lucide-react'
-import { compileEquation, hasAnimationParam } from '../plot'
-import type { Equation, GraphSettings, Viewport } from '../types'
+import { compileEquation, hasAnimationParam, hasTrigFunction, piLabel } from '../plot'
+import type { Equation, GraphSettings, PiLabelMode, Viewport } from '../types'
 
 export type GraphViewerHandle = {
   exportPNG: () => Promise<void>
@@ -15,6 +15,7 @@ type Props = {
   equations: Equation[]
   viewport: Viewport
   settings: GraphSettings
+  piLabelMode: PiLabelMode
 }
 
 /** 动画参数 t 的循环周期（弧度），t 在 [0, 2π) 内循环，适合 sin/cos 这类周期函数。 */
@@ -45,7 +46,7 @@ function useAnimationClock(playing: boolean) {
 }
 
 export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphViewer(
-  { equations, viewport, settings },
+  { equations, viewport, settings, piLabelMode },
   ref,
 ) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -77,6 +78,9 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
   }, [equations])
 
   const visible = useMemo(() => equations.filter((e) => e.visible), [equations])
+
+  const autoPi = useMemo(() => visible.some((e) => hasTrigFunction(e.expression)), [visible])
+  const usePiLabels = piLabelMode === 'pi' || (piLabelMode === 'auto' && autoPi)
 
   useImperativeHandle(ref, () => ({
     exportPNG: async () => {
@@ -115,7 +119,11 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
             zoom={false}
           >
             <Coordinates.Cartesian
-              xAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
+              xAxis={{
+                axis: settings.showAxes,
+                lines: settings.showGrid ? (usePiLabels ? Math.PI / 2 : 1) : false,
+                ...(usePiLabels ? { labels: piLabel } : {}),
+              }}
               yAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
             />
             {visible.map((equation) => {
