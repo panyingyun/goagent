@@ -8,8 +8,6 @@ import {
   FunctionSquare,
   Home,
   Maximize2,
-  Minus,
-  Plus,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { GraphViewer, type GraphViewerHandle } from './GraphViewer'
@@ -54,17 +52,6 @@ export function ResultPanel() {
 
   const parseError = Boolean(error && /解析失败|方程|表达式|syntax|invalid/i.test(error))
 
-  const zoomBy = (factor: number) => {
-    setViewport((prev) => {
-      if (!prev) return prev
-      const mx = (prev.xMin + prev.xMax) / 2
-      const my = (prev.yMin + prev.yMax) / 2
-      const hx = ((prev.xMax - prev.xMin) / 2) * factor
-      const hy = ((prev.yMax - prev.yMin) / 2) * factor
-      return { xMin: mx - hx, xMax: mx + hx, yMin: my - hy, yMax: my + hy }
-    })
-  }
-
   if (!session || !graph || !viewport || !settings) {
     return (
       <section className="flex min-w-[400px] flex-[2.4] flex-col bg-surface-low">
@@ -93,9 +80,10 @@ export function ResultPanel() {
       <div className="relative min-h-0 flex-[7] bg-white p-2">
         <GraphViewer ref={graphRef} equations={equations} viewport={viewport} settings={settings} piLabelMode={piLabelMode} />
         <GraphToolbar
-          onZoomIn={() => zoomBy(0.8)}
-          onZoomOut={() => zoomBy(1.25)}
-          onReset={() => baseViewport && setViewport({ ...baseViewport })}
+          onReset={() => {
+            if (baseViewport) setViewport({ ...baseViewport })
+            graphRef.current?.resetView()
+          }}
           onFullscreen={() => void graphRef.current?.requestFullscreen()}
         />
         {busy && (
@@ -315,19 +303,13 @@ export function ResultPanel() {
 }
 
 function GraphToolbar({
-  onZoomIn,
-  onZoomOut,
   onReset,
   onFullscreen,
 }: {
-  onZoomIn: () => void
-  onZoomOut: () => void
   onReset: () => void
   onFullscreen: () => void
 }) {
   const items = [
-    { label: '放大', icon: Plus, onClick: onZoomIn },
-    { label: '缩小', icon: Minus, onClick: onZoomOut },
     { label: '重置视图', icon: Home, onClick: onReset },
     { label: '全屏', icon: Maximize2, onClick: onFullscreen },
   ] as const

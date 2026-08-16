@@ -10,6 +10,7 @@ import type { Equation, GraphSettings, PiLabelMode, Viewport } from '../types'
 export type GraphViewerHandle = {
   exportPNG: () => Promise<void>
   requestFullscreen: () => Promise<void>
+  resetView: () => void
 }
 
 type Props = {
@@ -74,6 +75,8 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
   const wrapRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(0)
+  const [viewResetKey, setViewResetKey] = useState(0)
+  const prevViewportRef = useRef({ xMin: viewport.xMin, xMax: viewport.xMax, yMin: viewport.yMin, yMax: viewport.yMax })
 
   // Mafs 的 height 只接受固定数字，不响应 CSS 高度，因此用 ResizeObserver 测量容器。
   useEffect(() => {
@@ -86,6 +89,18 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  // 外部改变视口（参数面板/重置）时，重置 Mafs 内部相机（平移/缩放）
+  useEffect(() => {
+    const prev = prevViewportRef.current
+    if (
+      prev.xMin !== viewport.xMin || prev.xMax !== viewport.xMax ||
+      prev.yMin !== viewport.yMin || prev.yMax !== viewport.yMax
+    ) {
+      setViewResetKey((k) => k + 1)
+    }
+    prevViewportRef.current = { xMin: viewport.xMin, xMax: viewport.xMax, yMin: viewport.yMin, yMax: viewport.yMax }
+  }, [viewport.xMin, viewport.xMax, viewport.yMin, viewport.yMax])
 
   const animated = useMemo(() => equations.some((e) => hasAnimationParam(e.expression)), [equations])
   const [playing, setPlaying] = useState(true)
@@ -165,6 +180,7 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
         await el.requestFullscreen()
       }
     },
+    resetView: () => setViewResetKey((k) => k + 1),
   }))
 
   return (
@@ -172,11 +188,12 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
       <div ref={measureRef} className="absolute inset-0">
         {height > 0 && (
           <Mafs
+            key={viewResetKey}
             height={height}
             viewBox={{ x: [viewport.xMin, viewport.xMax], y: [viewport.yMin, viewport.yMax], padding: 0 }}
             preserveAspectRatio="contain"
-            pan={false}
-            zoom={false}
+            pan
+            zoom={{ min: 0.1, max: 20 }}
           >
             <Coordinates.Cartesian
               xAxis={{
