@@ -43,7 +43,7 @@ React
 Vite
 TypeScript
 Tailwind CSS
-Plotly.js 或 ECharts，优先 Plotly.js
+Mafs（React 数学可视化）+ mathjs 用于表达式求值
 KaTeX 或 MathJax 用于公式展示
 Zustand 或 Redux Toolkit 用于状态管理，优先 Zustand
 ```
@@ -272,7 +272,7 @@ ExportPanel：导出功能
 
 ## 5.1 GraphViewer
 
-使用 Plotly.js 绘制函数图像。
+使用 Mafs 绘制函数图像。
 
 需要支持：
 
@@ -306,23 +306,18 @@ y = 2*x + 1
 
 ---
 
-## 5.2 方程采样逻辑
+## 5.2 表达式编译与断点处理
 
-前端需要实现函数采样。
-
-示例函数：
+Mafs 内部对函数做自适应采样（在曲率变化大的地方自动加密），前端只需把白名单校验过的表达式编译成 `(x) => number`：
 
 ```ts
-export function sampleFunction(
-  expression: string,
-  viewport: Viewport,
-  sampleCount: number
-): { x: number[]; y: Array<number | null> } {
-  // 1. 编译表达式
-  // 2. 在 xMin 到 xMax 之间按 sampleCount 均匀采样
-  // 3. 对每个 x 计算 y
-  // 4. 遇到 NaN / Infinity / 异常值时返回 null
-  // 5. 对不连续点断开曲线
+export function compileEquation(expression: string): (x: number) => number {
+  const node = compile(expression)
+  return (x: number) => {
+    const value = node.evaluate({ x })
+    // 复数、NaN、Infinity 一律返回 NaN，让 Mafs 当作断点断开
+    return Number.isFinite(value) ? value : NaN
+  }
 }
 ```
 
@@ -344,42 +339,31 @@ math.js
 
 ---
 
-## 5.3 Plotly trace 转换
+## 5.3 Mafs 组件映射
 
-每个方程转换成一个 Plotly trace：
+每个方程渲染成一个 Mafs `<Plot.OfX>`：
 
-```ts
-{
-  x: sampled.x,
-  y: sampled.y,
-  type: "scatter",
-  mode: "lines",
-  name: equation.label,
-  line: {
-    color: equation.color,
-    width: equation.lineWidth
-  },
-  visible: equation.visible
-}
+```tsx
+<Plot.OfX
+  y={compileEquation(equation.expression)}
+  color={equation.color}
+  weight={equation.lineWidth}
+  opacity={1}
+/>
 ```
 
-Plotly layout 根据 viewport 和 settings 设置：
+Mafs 的坐标系根据 viewport 和 settings 设置：
 
-```ts
-{
-  xaxis: {
-    range: [viewport.xMin, viewport.xMax],
-    showgrid: settings.showGrid,
-    zeroline: settings.showAxis
-  },
-  yaxis: {
-    range: [viewport.yMin, viewport.yMax],
-    showgrid: settings.showGrid,
-    zeroline: settings.showAxis
-  },
-  showlegend: settings.showLegend
-}
+```tsx
+<Mafs viewBox={{ x: [viewport.xMin, viewport.xMax], y: [viewport.yMin, viewport.yMax] }}>
+  <Coordinates.Cartesian
+    xAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
+    yAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
+  />
+</Mafs>
 ```
+
+图例由前端用 HTML overlay 渲染，受 `showLegend` 控制。
 
 ---
 
@@ -1274,7 +1258,7 @@ assistant message content
 
 ```text
 更新 graphState
-重新渲染 Plotly 图像
+重新渲染函数图像
 同步保存到 SQLite
 ```
 
@@ -1459,7 +1443,7 @@ math.js
 FastAPI 后端接口
 SQLite 保存会话和消息
 DeepSeek 解析用户输入为结构化 JSON
-右侧 Plotly 绘制显函数
+右侧 Mafs 绘制显函数
 支持 y=x、y=x^2、sin(x)、cos(x)
 方程列表
 坐标范围设置
@@ -1692,7 +1676,7 @@ DeepSeek 返回结构化 JSON
 ↓
 前端拿到 graphState
 ↓
-右侧 Plotly 绘制 y=x
+右侧 Mafs 绘制 y=x
 ↓
 中间显示 AI 回复
 ```

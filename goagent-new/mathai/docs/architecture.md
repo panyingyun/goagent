@@ -49,5 +49,5 @@ Compose 将前端 Nginx 与后端 Go API 分成两个容器。浏览器只访问
 - 将 `ChatProcessor` 替换为 scripted fake，API 可完全离线测试；
 - 将 `llm.Client` 替换为其他 OpenAI-compatible 客户端；
 - 将 Store 抽象为 PostgreSQL，保留版本条件提交语义；
-- 将 Canvas 渲染器替换为 WebGL，不改变后端 GraphState；
+- 将 Mafs 渲染替换为 WebGL / Three.js，不改变后端 GraphState；
 - 增加 SSE 时，先流式发送文本事件，最终状态仍只做一次原子提交。

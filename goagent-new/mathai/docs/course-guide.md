@@ -50,9 +50,9 @@ sequenceDiagram
     API-->>UI: session + traceId
 ```
 
-## 4. 前端为什么使用 Canvas + mathjs
+## 4. 前端为什么使用 Mafs + mathjs
 
-Canvas 足以展示一元函数，也让课程代码保留核心算法：世界坐标到屏幕坐标的转换、采样、网格、断点判断和高 DPI 处理。表达式通过 `mathjs.compile` 解释，不使用 JavaScript `eval` 或 `new Function`。
+Mafs 是 React 的数学可视化组件库，内置坐标轴、网格、自适应采样、断点处理和平滑动画，前端只需把表达式求值交给它。表达式通过 `mathjs.compile` 解释，编译出的函数对复数、NaN、Infinity 一律返回 NaN，让 Mafs 当作断点断开；不使用 JavaScript `eval` 或 `new Function`。
 
 后端白名单是安全边界，前端解析只是渲染层。即使用户绕过前端，非法表达式仍无法进入持久化状态。
 
