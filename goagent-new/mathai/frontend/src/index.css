@@ -22,6 +22,13 @@
     sans-serif;
   --font-display: 'Newsreader', 'LXGWWenKai', Georgia, 'Times New Roman', 'PingFang SC', serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  /* Mafs 默认是深色主题；在此全局覆盖为浅色，对齐上方设计 token */
+  --mafs-bg: #fff;
+  --mafs-fg: #434655;
+  --mafs-origin-color: #191b23;
+  --mafs-line-color: #e1e2ed;
+  --grid-line-subdivision-color: #eef0f6;
 }
 
 html,

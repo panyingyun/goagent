@@ -1,6 +1,8 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import Plotly from 'plotly.js-dist-min'
-import { toTrace } from '../plot'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { Coordinates, Mafs, Plot } from 'mafs'
+import 'mafs/core.css'
+import { toPng } from 'html-to-image'
+import { compileEquation } from '../plot'
 import type { Equation, GraphSettings, Viewport } from '../types'
 
 export type GraphViewerHandle = {
@@ -19,16 +21,44 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
   ref,
 ) {
   const wrapRef = useRef<HTMLDivElement>(null)
-  const divRef = useRef<HTMLDivElement>(null)
+  const measureRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState(0)
+
+  // Mafs 的 height 只接受固定数字，不响应 CSS 高度，因此用 ResizeObserver 测量容器。
+  useEffect(() => {
+    const el = measureRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const next = entries[0]?.contentRect.height ?? 0
+      if (next > 0) setHeight(next)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const compiled = useMemo(() => {
+    const map = new Map<string, (x: number) => number>()
+    for (const equation of equations) {
+      map.set(equation.id, compileEquation(equation.expression))
+    }
+    return map
+  }, [equations])
+
+  const visible = useMemo(() => equations.filter((e) => e.visible), [equations])
 
   useImperativeHandle(ref, () => ({
     exportPNG: async () => {
-      if (!divRef.current) return
-      const img = await Plotly.toImage(divRef.current, { format: 'png', width: 1200, height: 800 })
-      const a = document.createElement('a')
-      a.href = img
-      a.download = 'math-graph.png'
-      a.click()
+      const el = wrapRef.current
+      if (!el) return
+      const dataUrl = await toPng(el, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        skipFonts: true,
+      })
+      const anchor = document.createElement('a')
+      anchor.href = dataUrl
+      anchor.download = 'math-graph.png'
+      anchor.click()
     },
     requestFullscreen: async () => {
       const el = wrapRef.current
@@ -41,49 +71,43 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
     },
   }))
 
-  useEffect(() => {
-    if (!divRef.current) return
-    const traces = equations.filter((e) => e.visible).map((e) => toTrace(e, viewport, settings))
-    const layout = {
-      paper_bgcolor: '#ffffff',
-      plot_bgcolor: '#ffffff',
-      font: { family: 'Inter, LXGWWenKai, sans-serif', color: '#434655', size: 12 },
-      xaxis: {
-        range: [viewport.xMin, viewport.xMax],
-        showgrid: settings.showGrid,
-        zeroline: settings.showAxes,
-        gridcolor: '#e1e2ed',
-        zerolinecolor: '#191b23',
-      },
-      yaxis: {
-        range: [viewport.yMin, viewport.yMax],
-        showgrid: settings.showGrid,
-        zeroline: settings.showAxes,
-        gridcolor: '#e1e2ed',
-        zerolinecolor: '#191b23',
-      },
-      showlegend: settings.showLegend,
-      margin: { l: 48, r: 56, t: 36, b: 48 },
-      legend: {
-        orientation: 'h',
-        x: 0,
-        y: 1.08,
-        xanchor: 'left',
-        bgcolor: 'rgba(255,255,255,0.85)',
-        bordercolor: '#e1e2ed',
-        borderwidth: 1,
-      },
-    }
-    void Plotly.react(divRef.current, traces, layout, {
-      responsive: true,
-      displaylogo: false,
-      displayModeBar: false,
-    })
-  }, [equations, viewport, settings])
-
   return (
-    <div ref={wrapRef} className="h-full w-full bg-white">
-      <div ref={divRef} className="h-full w-full" />
+    <div ref={wrapRef} className="relative h-full w-full bg-white">
+      <div ref={measureRef} className="absolute inset-0">
+        {height > 0 && (
+          <Mafs
+            height={height}
+            viewBox={{ x: [viewport.xMin, viewport.xMax], y: [viewport.yMin, viewport.yMax], padding: 0 }}
+            preserveAspectRatio={false}
+            pan={false}
+            zoom={false}
+          >
+            <Coordinates.Cartesian
+              xAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
+              yAxis={{ axis: settings.showAxes, lines: settings.showGrid ? 1 : false }}
+            />
+            {visible.map((equation) => (
+              <Plot.OfX
+                key={equation.id}
+                y={compiled.get(equation.id) ?? (() => NaN)}
+                color={equation.color}
+                weight={equation.lineWidth || 2}
+                opacity={1}
+              />
+            ))}
+          </Mafs>
+        )}
+      </div>
+      {settings.showLegend && visible.length > 0 && (
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-x-4 gap-y-1.5 rounded-lg border border-outline bg-white/85 px-3 py-2 shadow-soft backdrop-blur-sm">
+          {visible.map((equation) => (
+            <span key={equation.id} className="flex items-center gap-1.5 text-xs text-muted">
+              <span className="h-0.5 w-4 rounded-full" style={{ background: equation.color }} />
+              {equation.label || equation.expression}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 })

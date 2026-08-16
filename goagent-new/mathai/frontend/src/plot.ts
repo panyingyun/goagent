@@ -1,39 +1,28 @@
 import { compile } from 'mathjs'
-import type { Equation, GraphSettings, Viewport } from './types'
 
-export function sampleEquation(expr: string, xMin: number, xMax: number, count = 400) {
-  let fn: ((x: number) => number) | null = null
+/**
+ * 把白名单校验过的表达式字符串编译成 Mafs `Plot.OfX` 需要的 `(x) => number`。
+ *
+ * 后端 `domain.go` 的 `NormalizeExpression` 是安全边界；这里只是渲染层的求值，
+ * 所以对编译失败、复数、NaN、Infinity 一律返回 NaN，让 Mafs 当作断点处理，
+ * 与之前的 `sampleEquation` 行为一致，且不使用 `eval`。
+ */
+export function compileEquation(expression: string): (x: number) => number {
+  let evaluator: ((x: number) => number) | null = null
   try {
-    const node = compile(expr)
-    fn = (x: number) => node.evaluate({ x }) as number
-  } catch {
-    return { x: [] as number[], y: [] as Array<number | null> }
-  }
-  const x: number[] = []
-  const y: Array<number | null> = []
-  const step = (xMax - xMin) / Math.max(1, count)
-  for (let i = 0; i <= count; i++) {
-    const xi = xMin + i * step
-    try {
-      const v = fn(xi)
-      x.push(xi)
-      y.push(Number.isFinite(v) ? v : null)
-    } catch {
-      x.push(xi)
-      y.push(null)
+    const node = compile(expression)
+    evaluator = (x: number) => {
+      const value = node.evaluate({ x }) as number
+      return Number.isFinite(value) ? value : NaN
     }
+  } catch {
+    evaluator = () => NaN
   }
-  return { x, y }
-}
-
-export function toTrace(eq: Equation, viewport: Viewport, settings: GraphSettings) {
-  const { x, y } = sampleEquation(eq.expression, viewport.xMin, viewport.xMax, settings.sampleCount)
-  return {
-    x,
-    y,
-    type: 'scatter' as const,
-    mode: 'lines' as const,
-    name: eq.label || eq.expression,
-    line: { color: eq.color, width: eq.lineWidth || 2 },
+  return (x: number): number => {
+    try {
+      return evaluator!(x)
+    } catch {
+      return NaN
+    }
   }
 }
