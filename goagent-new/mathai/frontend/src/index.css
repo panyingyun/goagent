@@ -22,8 +22,11 @@
     sans-serif;
   --font-display: 'Newsreader', 'LXGWWenKai', Georgia, 'Times New Roman', 'PingFang SC', serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
 
-  /* Mafs 默认是深色主题；在此全局覆盖为浅色，对齐上方设计 token */
+/* Mafs 默认是深色主题：core.css 在 `.MafsView` 类自身声明了深色变量，
+   会遮蔽从 :root 继承的值。这里用更高特异性的选择器覆盖为浅色。 */
+.MafsView.MafsView {
   --mafs-bg: #fff;
   --mafs-fg: #434655;
   --mafs-origin-color: #191b23;
