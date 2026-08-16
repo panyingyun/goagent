@@ -6,7 +6,8 @@ services:
     env_file:
       - .env
     volumes:
-      - mathai-data:/app/data
+      - ./data:/app/data
+    user: "${UID:-1000}:${GID:-1000}"
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -33,6 +34,3 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
-
-volumes:
-  mathai-data:

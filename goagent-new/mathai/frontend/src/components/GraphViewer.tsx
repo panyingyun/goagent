@@ -22,6 +22,27 @@ type Props = {
 const ANIMATION_PERIOD = 2 * Math.PI
 
 /**
+ * 导出 PNG 时，Mafs 把坐标轴/网格线的颜色写在 SVG attribute 的 `var(--mafs-*)` 里，
+ * html-to-image 不会解析这些 var()，导致坐标轴/网格线消失。这里把变量回退值内联进去。
+ */
+const MAFS_VAR_FALLBACK: Record<string, string> = {
+  '--mafs-bg': '#ffffff',
+  '--mafs-fg': '#434655',
+  '--mafs-origin-color': '#191b23',
+  '--mafs-line-color': '#e1e2ed',
+  '--grid-line-subdivision-color': '#eef0f6',
+  '--mafs-axis-stroke-width': '1px',
+}
+
+function resolveMafsVar(node: Element, value: string): string {
+  return value.replace(/var\((--[\w-]+)\)/g, (match, name: string) => {
+    const computed = window.getComputedStyle(node).getPropertyValue(name).trim()
+    if (computed && computed !== `var(${name})`) return computed
+    return MAFS_VAR_FALLBACK[name] ?? match
+  })
+}
+
+/**
  * 轻量动画时钟：播放时用 requestAnimationFrame 累加相位并循环。
  * 不使用 Mafs 的 useStopwatch，因为它没有真·暂停（stop 会重置到 0），
  * 且其 setTime 内部会乘以 1000。这里暂停时 phase 保持不变，恢复后继续。
@@ -86,15 +107,40 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
     exportPNG: async () => {
       const el = wrapRef.current
       if (!el) return
-      const dataUrl = await toPng(el, {
-        backgroundColor: '#ffffff',
-        pixelRatio: 2,
-        skipFonts: true,
-      })
-      const anchor = document.createElement('a')
-      anchor.href = dataUrl
-      anchor.download = 'math-graph.png'
-      anchor.click()
+      const svg = el.querySelector('svg')
+      const patches: Array<{ node: Element; name: string; value: string | null }> = []
+      if (svg) {
+        for (const node of Array.from(svg.querySelectorAll('*'))) {
+          for (const name of ['stroke', 'stroke-width', 'fill']) {
+            const value = node.getAttribute(name)
+            if (value && value.includes('var(')) {
+              patches.push({ node, name, value })
+              node.setAttribute(name, resolveMafsVar(node, value))
+            }
+          }
+          const style = node.getAttribute('style')
+          if (style && style.includes('var(')) {
+            patches.push({ node, name: 'style', value: style })
+            node.setAttribute('style', resolveMafsVar(node, style))
+          }
+        }
+      }
+      try {
+        const dataUrl = await toPng(el, {
+          backgroundColor: '#ffffff',
+          pixelRatio: 2,
+          skipFonts: true,
+        })
+        const anchor = document.createElement('a')
+        anchor.href = dataUrl
+        anchor.download = 'math-graph.png'
+        anchor.click()
+      } finally {
+        for (const { node, name, value } of patches) {
+          if (value == null) node.removeAttribute(name)
+          else node.setAttribute(name, value)
+        }
+      }
     },
     requestFullscreen: async () => {
       const el = wrapRef.current

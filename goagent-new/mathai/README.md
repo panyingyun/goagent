@@ -27,6 +27,13 @@ docker compose up --build
 
 Docker 访问 `http://localhost:8080`。
 
+会话数据保存在 `data/sessions.json`（bind mount 到容器 `/app/data`），容器以 `.env` 里 `UID`/`GID` 指定的用户运行。若宿主机 uid 不是 1000，或启动时遇到 `permission denied`，先修正目录属主再启动：
+
+```bash
+docker run --rm -v "$(pwd)/data:/d" alpine chown -R "$(id -u):$(id -g)" /d
+docker compose up -d
+```
+
 - [`backend/math_agent.go`](backend/math_agent.go)：读工具、写工具、审批与 trace；
 - [`backend/eval.go`](backend/eval.go)：读取 `testdata/eval-cases.json`，用 `pkg/eval` 核对补丁轨迹和 GraphState；
 - [`backend/domain.go`](backend/domain.go)：`GraphPatch` 确定性校验，模型不能直接覆盖存储；
