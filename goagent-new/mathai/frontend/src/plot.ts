@@ -69,3 +69,19 @@ function approximateFraction(value: number, maxDen: number): [number, number] {
   }
   return [bestNum, bestDen]
 }
+
+/** 计算"漂亮"的整数刻度间距（1、2、5 × 10^n），使约 targetTicks 个刻度，避免数字重叠。 */
+export function integerAxisStep(range: number, targetTicks = 10): number {
+  const raw = range / targetTicks
+  const exp = Math.floor(Math.log10(raw))
+  const base = Math.pow(10, exp)
+  const frac = raw / base
+  const mult = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10
+  return mult * base
+}
+
+/** 计算 π 刻度间距（π/2 的整数倍），使约 targetTicks 个刻度。 */
+export function piAxisStep(range: number, targetTicks = 8): number {
+  const rough = range / targetTicks / (Math.PI / 2)
+  return Math.max(1, Math.round(rough)) * (Math.PI / 2)
+}
