@@ -85,3 +85,71 @@ export function piAxisStep(range: number, targetTicks = 8): number {
   const rough = range / targetTicks / (Math.PI / 2)
   return Math.max(1, Math.round(rough)) * (Math.PI / 2)
 }
+
+export type AxisIntersection = { x: number; y: number }
+
+/**
+ * 求曲线 y = f(x) 与 x 轴（y=0）、y 轴（x=0）的交点。
+ * 零点用「扫描 + 二分法」在 [xMin, xMax] 内数值求解；结果按坐标去重。
+ */
+export function findAxisIntersections(
+  f: (x: number) => number,
+  xMin: number,
+  xMax: number,
+  samples = 160,
+): AxisIntersection[] {
+  const points: AxisIntersection[] = []
+  const seen = new Set<string>()
+  const push = (x: number, y: number) => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return
+    const key = `${x.toFixed(6)},${y.toFixed(6)}`
+    if (seen.has(key)) return
+    seen.add(key)
+    points.push({ x, y })
+  }
+
+  // y 轴交点（x=0）
+  if (0 >= xMin && 0 <= xMax) {
+    push(0, f(0))
+  }
+
+  // x 轴交点（零点）：扫描符号变化区间后二分精化
+  const step = (xMax - xMin) / samples
+  let prevX = xMin
+  let prevY = f(xMin)
+  for (let i = 1; i <= samples; i++) {
+    const x = xMin + i * step
+    const y = f(x)
+    if (Number.isFinite(prevY) && Number.isFinite(y)) {
+      if (prevY === 0) push(prevX, 0)
+      else if (prevY * y < 0) push(bisect(f, prevX, x), 0)
+    }
+    prevX = x
+    prevY = y
+  }
+  if (Number.isFinite(prevY) && prevY === 0) push(prevX, 0)
+
+  return points
+}
+
+function bisect(f: (x: number) => number, a: number, b: number): number {
+  let lo = a
+  let hi = b
+  let flo = f(lo)
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    const fm = f(mid)
+    if (flo * fm <= 0) hi = mid
+    else {
+      lo = mid
+      flo = fm
+    }
+  }
+  return (lo + hi) / 2
+}
+
+/** 格式化坐标值，最多 2 位小数（消除 -0）。 */
+export function formatCoordinate(v: number): string {
+  const r = Math.round(v * 100) / 100
+  return Object.is(r, -0) ? '0' : String(r)
+}

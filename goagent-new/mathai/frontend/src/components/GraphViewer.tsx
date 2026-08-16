@@ -1,9 +1,10 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Coordinates, Mafs, Plot } from 'mafs'
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { Coordinates, Mafs, Plot, Point, Text } from 'mafs'
 import 'mafs/core.css'
 import { toPng } from 'html-to-image'
 import { Pause, Play, RotateCcw } from 'lucide-react'
-import { compileEquation, hasAnimationParam, hasTrigFunction, integerAxisStep, piAxisStep, piLabel } from '../plot'
+import { compileEquation, findAxisIntersections, formatCoordinate, hasAnimationParam, hasTrigFunction, integerAxisStep, piAxisStep, piLabel } from '../plot'
+import type { AxisIntersection } from '../plot'
 import type { Equation, GraphSettings, PiLabelMode, Viewport } from '../types'
 
 export type GraphViewerHandle = {
@@ -106,6 +107,16 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
   const xStep = usePiLabels ? piAxisStep(viewport.xMax - viewport.xMin) : integerAxisStep(viewport.xMax - viewport.xMin)
   const yStep = integerAxisStep(viewport.yMax - viewport.yMin)
 
+  const intersections = useMemo(() => {
+    const map = new Map<string, AxisIntersection[]>()
+    for (const equation of visible) {
+      const fn = compiled.get(equation.id)
+      if (!fn) continue
+      map.set(equation.id, findAxisIntersections((x) => fn(x, phase), viewport.xMin, viewport.xMax))
+    }
+    return map
+  }, [visible, compiled, phase, viewport.xMin, viewport.xMax])
+
   useImperativeHandle(ref, () => ({
     exportPNG: async () => {
       const el = wrapRef.current
@@ -175,16 +186,29 @@ export const GraphViewer = forwardRef<GraphViewerHandle, Props>(function GraphVi
               }}
               yAxis={{ axis: settings.showAxes, lines: settings.showGrid ? yStep : false }}
             />
+            <Text x={0} y={0} attach="se" attachDistance={8} size={12} color="#737686">
+              (0,0)
+            </Text>
             {visible.map((equation) => {
               const fn = compiled.get(equation.id)
+              const pts = intersections.get(equation.id) ?? []
               return (
-                <Plot.OfX
-                  key={equation.id}
-                  y={(x) => (fn ? fn(x, phase) : NaN)}
-                  color={equation.color}
-                  weight={equation.lineWidth || 2}
-                  opacity={1}
-                />
+                <Fragment key={equation.id}>
+                  <Plot.OfX
+                    y={(x) => (fn ? fn(x, phase) : NaN)}
+                    color={equation.color}
+                    weight={equation.lineWidth || 2}
+                    opacity={1}
+                  />
+                  {pts.map((pt, i) => (
+                    <Fragment key={i}>
+                      <Point x={pt.x} y={pt.y} color={equation.color} />
+                      <Text x={pt.x} y={pt.y} attach="n" attachDistance={6} size={11} color="#434655">
+                        ({formatCoordinate(pt.x)}, {formatCoordinate(pt.y)})
+                      </Text>
+                    </Fragment>
+                  ))}
+                </Fragment>
               )
             })}
           </Mafs>
