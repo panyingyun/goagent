@@ -15,6 +15,8 @@ import (
 	"mathai/pkg/llm"
 )
 
+const evalCasesFileName = "eval-cases-one.json"
+
 type evalFileCase struct {
 	ID                    string   `json:"id"`
 	Message               string   `json:"message"`
@@ -39,22 +41,17 @@ func loadEvalFileCases() ([]evalFileCase, error) {
 }
 
 func evalCasesPath() string {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if ok {
-		candidate := filepath.Join(filepath.Dir(thisFile), "..", "testdata", "eval-cases.json")
+	fallback := filepath.Join("..", "testdata", evalCasesFileName)
+	candidates := []string{fallback, filepath.Join("testdata", evalCasesFileName)}
+	if _, thisFile, _, ok := runtime.Caller(0); ok {
+		candidates = append([]string{filepath.Join(filepath.Dir(thisFile), "..", "testdata", evalCasesFileName)}, candidates...)
+	}
+	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate
 		}
 	}
-	for _, candidate := range []string{
-		filepath.Join("..", "testdata", "eval-cases.json"),
-		filepath.Join("testdata", "eval-cases.json"),
-	} {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-	return filepath.Join("..", "testdata", "eval-cases.json")
+	return fallback
 }
 
 func evalCasesFromFile(fileCases []evalFileCase) ([]eval.Case, error) {
@@ -158,9 +155,10 @@ func matchEvalCases(ctx context.Context, cases []eval.Case, run eval.RunFunc) []
 	results := make([]eval.Result, 0, len(cases))
 	for _, testCase := range cases {
 		out, err := run(ctx, testCase.Input)
-		fmt.Println("input = ", testCase.Input)
+		// //fmt.Println("=====> input = ", testCase.Input)
+		// fmt.Println("=====> out = ", out.Tools)
 		if encoded, encodeErr := json.MarshalIndent(out, "", "  "); encodeErr == nil {
-			fmt.Println(string(encoded))
+			fmt.Println("=====> encoded = ", string(encoded))
 		}
 		if err != nil {
 			results = append(results, eval.Result{Case: testCase.Name, Reason: err.Error()})
@@ -196,11 +194,16 @@ func runEvalSuite(ctx context.Context, client llm.Client) ([]eval.Result, error)
 		return nil, err
 	}
 	cases, err := evalCasesFromFile(fileCases)
+	//fmt.Println("====> cases = ", cases)
 	if err != nil {
 		return nil, err
 	}
 	run := func(ctx context.Context, input string) (eval.Outcome, error) {
 		result, err := NewMathAgent(client).Process(ctx, Session{ID: "eval", Version: 1, GraphState: DefaultGraphState()}, input)
+		//fmt.Println("====> result = ", result)
+		fmt.Println("====> result.Answer = ", result.Answer)
+		fmt.Println("====> result.Operations = ", result.Operations)
+		fmt.Println("====> result.State = ", result.State)
 		if err != nil {
 			return eval.Outcome{}, err
 		}

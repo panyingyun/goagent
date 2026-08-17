@@ -1,0 +1,8 @@
+[
+  {
+    "id": "one-equation",
+    "message": "画出 y=x 和 y=x^2，并比较交点",
+    "expectedOperations": ["replace_equations"],
+    "expectedExpressions": ["x", "x^2"]
+  }
+]
