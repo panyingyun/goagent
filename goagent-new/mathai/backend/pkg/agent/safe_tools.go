@@ -17,6 +17,7 @@ import (
 	_ "time/tzdata"
 )
 
+// NewCalculatorTool 返回仅支持四则运算与括号的计算器工具。
 func NewCalculatorTool() Tool {
 	return Tool{
 		Name:         "calculator",
@@ -45,6 +46,7 @@ func NewCalculatorTool() Tool {
 	}
 }
 
+// NewGetTimeTool 返回获取北京时间的工具。
 func NewGetTimeTool() Tool {
 	return Tool{
 		Name:         "get_time",
@@ -68,6 +70,7 @@ func NewGetTimeTool() Tool {
 	}
 }
 
+// NewListFilesTool 返回列出 root 下 .txt 文件的工具。
 func NewListFilesTool(root string) Tool {
 	return Tool{
 		Name:         "list_documents",
@@ -98,6 +101,7 @@ func NewListFilesTool(root string) Tool {
 	}
 }
 
+// NewReadFileTool 返回读取 root 下 .txt 文件的工具（最多 64 KiB）。
 func NewReadFileTool(root string) Tool {
 	return Tool{
 		Name:         "read_document",
@@ -141,6 +145,7 @@ func NewReadFileTool(root string) Tool {
 	}
 }
 
+// NewWriteFileTool 返回需审批后写入 root 下 .txt 笔记的工具。
 func NewWriteFileTool(root string) Tool {
 	return Tool{
 		Name:             "write_note",

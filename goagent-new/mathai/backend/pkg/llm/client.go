@@ -22,6 +22,7 @@ type HTTPClient struct {
 	HTTP    *http.Client
 }
 
+// NewHTTPClient 构造指向 OpenAI-compatible Chat Completions 接口的 HTTP 客户端。
 func NewHTTPClient(apiKey, baseURL, model string) *HTTPClient {
 	return &HTTPClient{
 		APIKey:  apiKey,
@@ -38,14 +39,17 @@ type HTTPError struct {
 	RequestID  string
 }
 
+// Error 实现 error 接口，包含状态码、请求 ID 与响应体摘要。
 func (e *HTTPError) Error() string {
 	return fmt.Sprintf("llm http status %d (request_id=%q): %s", e.StatusCode, e.RequestID, e.Body)
 }
 
+// Retryable 表示该错误适合重试（429 或 5xx）。
 func (e *HTTPError) Retryable() bool {
 	return e.StatusCode == http.StatusTooManyRequests || e.StatusCode >= 500
 }
 
+// Complete 发起一次非流式补全请求。
 func (c *HTTPClient) Complete(ctx context.Context, in Request) (Response, error) {
 	if c.APIKey == "" || c.BaseURL == "" || c.Model == "" {
 		return Response{}, errors.New("缺少 DEEPSEEK_API_KEY(或 LLM_API_KEY)")

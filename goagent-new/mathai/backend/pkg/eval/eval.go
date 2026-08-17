@@ -37,6 +37,7 @@ type Result struct {
 	Reason string
 }
 
+// Run 按顺序执行用例，核对工具轨迹与状态断言，返回每条结论。
 func Run(ctx context.Context, cases []Case, run RunFunc) []Result {
 	results := make([]Result, 0, len(cases))
 	for _, c := range cases {
@@ -68,6 +69,7 @@ func Run(ctx context.Context, cases []Case, run RunFunc) []Result {
 	return results
 }
 
+// PassRate 计算通过用例占比；空列表返回 0。
 func PassRate(results []Result) float64 {
 	if len(results) == 0 {
 		return 0

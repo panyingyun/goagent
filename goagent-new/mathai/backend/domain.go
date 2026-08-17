@@ -26,6 +26,7 @@ var allowedIdentifiers = map[string]bool{
 
 var graphPalette = []string{"#2563EB", "#DC2626", "#059669", "#7C3AED", "#EA580C", "#0891B2"}
 
+// DefaultGraphState 返回空白图形的默认状态（坐标系范围与显示设置）。
 func DefaultGraphState() GraphState {
 	return GraphState{
 		Equations: []Equation{},
@@ -34,6 +35,7 @@ func DefaultGraphState() GraphState {
 	}
 }
 
+// NormalizeExpression 规范化并校验函数表达式，只允许 y=f(x) 形式与显式乘法。
 func NormalizeExpression(raw string) (string, error) {
 	expr := strings.TrimSpace(strings.NewReplacer("×", "*", "÷", "/", "²", "^2", "−", "-").Replace(raw))
 	if len(expr) > 120 {
@@ -82,6 +84,7 @@ func NormalizeExpression(raw string) (string, error) {
 	return lower, nil
 }
 
+// ApplyGraphPatch 对图形状态应用一个原子补丁；校验失败时返回原状态。
 func ApplyGraphPatch(state GraphState, patch GraphPatch) (GraphState, error) {
 	next := cloneGraphState(state)
 	switch patch.Operation {

@@ -27,6 +27,7 @@ type storeFile struct {
 	Sessions map[string]Session `json:"sessions"`
 }
 
+// OpenStore 打开 path 处的会话 JSON 存储；文件不存在时返回空存储。
 func OpenStore(path string) (*Store, error) {
 	store := &Store{path: path, sessions: make(map[string]Session)}
 	data, err := os.ReadFile(path)
@@ -46,6 +47,7 @@ func OpenStore(path string) (*Store, error) {
 	return store, nil
 }
 
+// Create 新建会话并持久化；标题为空时使用默认值，超过 80 字则截断。
 func (s *Store) Create(title string) (Session, error) {
 	now := time.Now().UTC()
 	title = strings.TrimSpace(title)
@@ -67,6 +69,7 @@ func (s *Store) Create(title string) (Session, error) {
 	return cloneSession(session), nil
 }
 
+// List 返回按更新时间倒序排列的会话摘要。
 func (s *Store) List() []SessionSummary {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -78,6 +81,7 @@ func (s *Store) List() []SessionSummary {
 	return result
 }
 
+// Get 按 ID 返回会话副本；不存在时返回 ErrNotFound。
 func (s *Store) Get(id string) (Session, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -88,6 +92,7 @@ func (s *Store) Get(id string) (Session, error) {
 	return cloneSession(session), nil
 }
 
+// Delete 删除指定会话并持久化；不存在时返回 ErrNotFound。
 func (s *Store) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,6 +108,7 @@ func (s *Store) Delete(id string) error {
 	return nil
 }
 
+// CommitChat 在版本匹配时追加一轮对话、更新图形状态并递增版本；冲突时返回 ErrConflict。
 func (s *Store) CommitChat(id string, expectedVersion int64, user, assistant Message, state GraphState) (Session, error) {
 	if err := validateGraphState(state); err != nil {
 		return Session{}, err

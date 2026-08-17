@@ -32,6 +32,7 @@ type Tool struct {
 	Run              func(context.Context, json.RawMessage) (string, error)
 }
 
+// Definition 转为发给模型的工具定义。
 func (t Tool) Definition() llm.ToolDefinition {
 	return llm.ToolDefinition{
 		Type: "function",
@@ -53,12 +54,14 @@ type ApprovalRequest struct {
 
 // Approver 决定是否允许执行一次有副作用的工具调用。
 type Approver interface {
+	// Approve 决定是否允许执行该工具调用。
 	Approve(ctx context.Context, req ApprovalRequest) (bool, error)
 }
 
 // ApproverFunc 将函数适配为 Approver。
 type ApproverFunc func(context.Context, ApprovalRequest) (bool, error)
 
+// Approve 将函数调用转发给底层 ApproverFunc。
 func (f ApproverFunc) Approve(ctx context.Context, req ApprovalRequest) (bool, error) {
 	return f(ctx, req)
 }
@@ -77,12 +80,14 @@ type Event struct {
 
 // Observer 接收运行时事件,用于 trace、指标或审计。
 type Observer interface {
+	// Record 接收一条运行时事件。
 	Record(ctx context.Context, event Event)
 }
 
 // ObserverFunc 将函数适配为 Observer。
 type ObserverFunc func(context.Context, Event)
 
+// Record 将函数调用转发给底层 ObserverFunc。
 func (f ObserverFunc) Record(ctx context.Context, event Event) { f(ctx, event) }
 
 // ToolResult 是单次工具调用的执行结果。

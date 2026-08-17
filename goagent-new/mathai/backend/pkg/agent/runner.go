@@ -18,6 +18,7 @@ type Runner struct {
 	MaxRounds int
 }
 
+// Run 驱动 LLM 与工具循环，直到产出最终文本或超过轮次上限。
 func (r *Runner) Run(ctx context.Context, messages []llm.Message) (string, []llm.Message, error) {
 	if r.LLM == nil || r.Executor == nil {
 		return "", messages, errors.New("runner requires LLM and Executor")

@@ -26,6 +26,7 @@ type Executor struct {
 	Observer   Observer
 }
 
+// NewExecutor 创建空的工具执行器。
 func NewExecutor() *Executor {
 	return &Executor{
 		tools:      make(map[string]Tool),
@@ -34,6 +35,7 @@ func NewExecutor() *Executor {
 	}
 }
 
+// Register 注册工具；写操作会强制审批且禁止缓存与并行。
 func (e *Executor) Register(tool Tool) error {
 	if strings.TrimSpace(tool.Name) == "" || tool.Run == nil {
 		return errors.New("tool name and Run are required")
@@ -58,6 +60,7 @@ func (e *Executor) Register(tool Tool) error {
 	return nil
 }
 
+// Definitions 返回按名称排序的工具定义，供 LLM 请求使用。
 func (e *Executor) Definitions() []llm.ToolDefinition {
 	e.mu.Lock()
 	names := make([]string, 0, len(e.tools))
@@ -73,6 +76,7 @@ func (e *Executor) Definitions() []llm.ToolDefinition {
 	return defs
 }
 
+// Execute 执行单次工具调用，处理审批、缓存与幂等。
 func (e *Executor) Execute(ctx context.Context, call llm.ToolCall) ToolResult {
 	started := time.Now()
 	e.mu.Lock()
@@ -134,6 +138,7 @@ func (e *Executor) Execute(ctx context.Context, call llm.ToolCall) ToolResult {
 	return e.finish(ctx, result, started, key)
 }
 
+// ExecuteBatch 执行一批工具调用；全部只读且并行安全时并发执行。
 func (e *Executor) ExecuteBatch(ctx context.Context, calls []llm.ToolCall) []ToolResult {
 	results := make([]ToolResult, len(calls))
 	if len(calls) == 0 {

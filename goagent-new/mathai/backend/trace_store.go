@@ -9,6 +9,7 @@ type TraceStore struct {
 	records map[string]TraceRecord
 }
 
+// NewTraceStore 创建最多保留 maximum 条记录的内存追踪存储。
 func NewTraceStore(maximum int) *TraceStore {
 	if maximum < 1 {
 		maximum = 100
@@ -16,6 +17,7 @@ func NewTraceStore(maximum int) *TraceStore {
 	return &TraceStore{maximum: maximum, records: make(map[string]TraceRecord)}
 }
 
+// Put 写入一条追踪记录，超出容量时淘汰最旧的。
 func (s *TraceStore) Put(record TraceRecord) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -29,6 +31,7 @@ func (s *TraceStore) Put(record TraceRecord) {
 	}
 }
 
+// Get 按 ID 读取追踪记录。
 func (s *TraceStore) Get(id string) (TraceRecord, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

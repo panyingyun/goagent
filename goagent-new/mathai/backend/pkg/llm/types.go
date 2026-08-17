@@ -77,5 +77,6 @@ type Response struct {
 
 // Client 抽象 LLM 补全能力,便于用假实现做单测。
 type Client interface {
+	// Complete 发起一次补全请求。
 	Complete(ctx context.Context, req Request) (Response, error)
 }

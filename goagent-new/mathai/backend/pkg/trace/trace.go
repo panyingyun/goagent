@@ -34,8 +34,10 @@ type Recorder struct {
 	events []agent.Event
 }
 
+// NewRecorder 创建空的追踪记录器。
 func NewRecorder() *Recorder { return &Recorder{} }
 
+// Start 开始一个命名 Span，返回带父 Span 的 context 以及结束回调。
 func (r *Recorder) Start(ctx context.Context, name string, attrs map[string]any) (context.Context, func(error)) {
 	span := &Span{ID: strconv.FormatUint(r.nextID.Add(1), 10), Name: name, Started: time.Now().UTC(), Attrs: cloneMap(attrs)}
 	if parent, ok := ctx.Value(spanKey{}).(*Span); ok {
@@ -58,12 +60,14 @@ func (r *Recorder) Start(ctx context.Context, name string, attrs map[string]any)
 	}
 }
 
+// Record 实现 agent.Observer，追加一条运行时事件。
 func (r *Recorder) Record(_ context.Context, event agent.Event) {
 	r.mu.Lock()
 	r.events = append(r.events, event)
 	r.mu.Unlock()
 }
 
+// Snapshot 返回当前 Span 与事件的副本。
 func (r *Recorder) Snapshot() ([]Span, []agent.Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -76,6 +80,7 @@ func (r *Recorder) Snapshot() ([]Span, []agent.Event) {
 	return spans, events
 }
 
+// Export 将快照编码为 JSON 写入 w。
 func (r *Recorder) Export(w io.Writer) error {
 	spans, events := r.Snapshot()
 	return json.NewEncoder(w).Encode(map[string]any{"spans": spans, "events": events})

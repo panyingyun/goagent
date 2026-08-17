@@ -26,10 +26,12 @@ type API struct {
 	limiter     *rateLimiter
 }
 
+// NewAPI 构造 HTTP API，绑定会话存储、聊天处理器与追踪存储。
 func NewAPI(store *Store, processor ChatProcessor, traces *TraceStore, token, allowOrigin string, ready bool) *API {
 	return &API{store: store, agent: processor, traces: traces, token: token, allowOrigin: allowOrigin, ready: ready, limiter: newRateLimiter(60, time.Minute)}
 }
 
+// Handler 返回带 CORS 与鉴权中间件的路由。
 func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {

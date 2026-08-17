@@ -36,6 +36,7 @@ type ChatResult struct {
 }
 
 type ChatProcessor interface {
+	// Process 在给定会话上处理用户输入，返回回答、更新后的图形与操作轨迹。
 	Process(ctx context.Context, session Session, userText string) (ChatResult, error)
 }
 
@@ -43,10 +44,12 @@ type MathAgent struct {
 	client llm.Client
 }
 
+// NewMathAgent 用给定 LLM 客户端构造数学可视化 Agent。
 func NewMathAgent(client llm.Client) *MathAgent {
 	return &MathAgent{client: client}
 }
 
+// Process 处理用户消息：通过受控工具修改图形，并返回回答、最终状态与操作轨迹。
 func (m *MathAgent) Process(ctx context.Context, session Session, userText string) (result ChatResult, finalErr error) {
 	if m.client == nil {
 		return result, errors.New("LLM client is required")
