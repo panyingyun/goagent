@@ -2,25 +2,14 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
-	"time"
+
+	"mathai/pkg/llm"
 )
-
-type fakeProcessor struct{}
-
-func (fakeProcessor) Process(_ context.Context, session Session, _ string) (ChatResult, error) {
-	state, err := ApplyGraphPatch(session.GraphState, GraphPatch{Operation: "add_equation", Equation: &EquationInput{Expression: "sin(x)"}})
-	if err != nil {
-		return ChatResult{}, err
-	}
-	traceID := "trace_test"
-	return ChatResult{Answer: "已绘制正弦函数。", State: state, TraceID: traceID, Trace: TraceRecord{ID: traceID, SessionID: session.ID, CreatedAt: time.Now().UTC(), Spans: []any{}, Events: []any{}}}, nil
-}
 
 func TestSessionChatAPI(t *testing.T) {
 	t.Parallel()
@@ -28,7 +17,22 @@ func TestSessionChatAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	api := NewAPI(store, fakeProcessor{}, NewTraceStore(10), "", "", true)
+	client := &scriptedClient{responses: []llm.Response{
+		{
+			Message: llm.Message{
+				Role: llm.RoleAssistant,
+				ToolCalls: []llm.ToolCall{{
+					ID: "call_1", Type: "function",
+					Function: llm.FunctionCall{
+						Name:      "apply_graph_patch",
+						Arguments: `{"operation":"add_equation","equation":{"expression":"sin(x)"}}`,
+					},
+				}},
+			},
+		},
+		{Message: llm.Message{Role: llm.RoleAssistant, Content: "已绘制正弦函数。"}},
+	}}
+	api := NewAPI(store, NewMathAgent(client), NewTraceStore(10), "", "", true)
 	server := httptest.NewServer(api.Handler())
 	defer server.Close()
 
@@ -37,7 +41,7 @@ func TestSessionChatAPI(t *testing.T) {
 		Session Session `json:"session"`
 		TraceID string  `json:"traceId"`
 	}](t, http.MethodPost, server.URL+"/api/sessions/"+created.ID+"/chat", map[string]string{"message": "画 sin(x)"}, http.StatusOK)
-	if len(response.Session.GraphState.Equations) != 1 || response.TraceID != "trace_test" {
+	if len(response.Session.GraphState.Equations) != 1 || response.TraceID == "" {
 		t.Fatalf("unexpected response: %+v", response)
 	}
 	trace := requestJSON[TraceRecord](t, http.MethodGet, server.URL+"/api/traces/"+response.TraceID, nil, http.StatusOK)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"mime"
@@ -18,7 +19,7 @@ const maxRequestBytes = 32 << 10
 
 type API struct {
 	store       *Store
-	agent       ChatProcessor
+	agent       *MathAgent
 	traces      *TraceStore
 	token       string
 	allowOrigin string
@@ -27,39 +28,39 @@ type API struct {
 }
 
 // NewAPI 构造 HTTP API，绑定会话存储、聊天处理器与追踪存储。
-func NewAPI(store *Store, processor ChatProcessor, traces *TraceStore, token, allowOrigin string, ready bool) *API {
-	return &API{store: store, agent: processor, traces: traces, token: token, allowOrigin: allowOrigin, ready: ready, limiter: newRateLimiter(60, time.Minute)}
+func NewAPI(store *Store, agent *MathAgent, traces *TraceStore, token, allowOrigin string, ready bool) *API {
+	return &API{store: store, agent: agent, traces: traces, token: token, allowOrigin: allowOrigin, ready: ready, limiter: newRateLimiter(60, time.Minute)}
 }
 
 // Handler 返回带 CORS 与鉴权中间件的路由。
-func (a *API) Handler() http.Handler {
+func (api *API) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("GET /readyz", a.handleReady)
-	mux.Handle("GET /api/sessions", a.protect(http.HandlerFunc(a.listSessions)))
-	mux.Handle("POST /api/sessions", a.protect(http.HandlerFunc(a.createSession)))
-	mux.Handle("GET /api/sessions/{id}", a.protect(http.HandlerFunc(a.getSession)))
-	mux.Handle("DELETE /api/sessions/{id}", a.protect(http.HandlerFunc(a.deleteSession)))
-	mux.Handle("POST /api/sessions/{id}/chat", a.protect(http.HandlerFunc(a.chat)))
-	mux.Handle("GET /api/traces/{id}", a.protect(http.HandlerFunc(a.getTrace)))
-	return a.cors(mux)
+	mux.HandleFunc("GET /readyz", api.handleReady)
+	mux.Handle("GET /api/sessions", api.protect(http.HandlerFunc(api.listSessions)))
+	mux.Handle("POST /api/sessions", api.protect(http.HandlerFunc(api.createSession)))
+	mux.Handle("GET /api/sessions/{id}", api.protect(http.HandlerFunc(api.getSession)))
+	mux.Handle("DELETE /api/sessions/{id}", api.protect(http.HandlerFunc(api.deleteSession)))
+	mux.Handle("POST /api/sessions/{id}/chat", api.protect(http.HandlerFunc(api.chat)))
+	mux.Handle("GET /api/traces/{id}", api.protect(http.HandlerFunc(api.getTrace)))
+	return api.cors(mux)
 }
 
-func (a *API) handleReady(w http.ResponseWriter, _ *http.Request) {
-	if !a.ready {
+func (api *API) handleReady(w http.ResponseWriter, _ *http.Request) {
+	if !api.ready {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "not_ready", "reason": "DEEPSEEK_API_KEY is required"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
-func (a *API) listSessions(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"sessions": a.store.List()})
+func (api *API) listSessions(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"sessions": api.store.List()})
 }
 
-func (a *API) createSession(w http.ResponseWriter, r *http.Request) {
+func (api *API) createSession(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Title string `json:"title"`
 	}
@@ -67,7 +68,7 @@ func (a *API) createSession(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	session, err := a.store.Create(request.Title)
+	session, err := api.store.Create(request.Title)
 	if err != nil {
 		log.Printf("create session: %v", err)
 		writeAPIError(w, http.StatusInternalServerError, "could not create session")
@@ -76,8 +77,8 @@ func (a *API) createSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, session)
 }
 
-func (a *API) getSession(w http.ResponseWriter, r *http.Request) {
-	session, err := a.store.Get(r.PathValue("id"))
+func (api *API) getSession(w http.ResponseWriter, r *http.Request) {
+	session, err := api.store.Get(r.PathValue("id"))
 	if errors.Is(err, ErrNotFound) {
 		writeAPIError(w, http.StatusNotFound, err.Error())
 		return
@@ -89,8 +90,8 @@ func (a *API) getSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, session)
 }
 
-func (a *API) deleteSession(w http.ResponseWriter, r *http.Request) {
-	err := a.store.Delete(r.PathValue("id"))
+func (api *API) deleteSession(w http.ResponseWriter, r *http.Request) {
+	err := api.store.Delete(r.PathValue("id"))
 	if errors.Is(err, ErrNotFound) {
 		writeAPIError(w, http.StatusNotFound, err.Error())
 		return
@@ -102,7 +103,7 @@ func (a *API) deleteSession(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (a *API) chat(w http.ResponseWriter, r *http.Request) {
+func (api *API) chat(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Message string `json:"message"`
 	}
@@ -110,12 +111,15 @@ func (a *API) chat(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	fmt.Println("====> request.Message = ", request.Message)
+
 	request.Message = strings.TrimSpace(request.Message)
 	if request.Message == "" || len(request.Message) > 4000 {
 		writeAPIError(w, http.StatusBadRequest, "message must contain 1 to 4000 characters")
 		return
 	}
-	session, err := a.store.Get(r.PathValue("id"))
+	fmt.Println("====>session id ) = ", r.PathValue("id"))
+	session, err := api.store.Get(r.PathValue("id"))
 	if errors.Is(err, ErrNotFound) {
 		writeAPIError(w, http.StatusNotFound, err.Error())
 		return
@@ -127,7 +131,8 @@ func (a *API) chat(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := contextWithTimeout(r, 70*time.Second)
 	defer cancel()
-	result, err := a.agent.Process(ctx, session, request.Message)
+	result, err := api.agent.Process(ctx, session, request.Message)
+	//fmt.Println("====> result = ", result)
 	if err != nil {
 		log.Printf("MathAI chat failed session=%s: %v", session.ID, err)
 		writeAPIError(w, http.StatusBadGateway, "MathAI request failed")
@@ -136,7 +141,13 @@ func (a *API) chat(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	userMessage := Message{ID: newID("msg"), Role: "user", Content: request.Message, CreatedAt: now}
 	assistantMessage := Message{ID: newID("msg"), Role: "assistant", Content: result.Answer, TraceID: result.TraceID, CreatedAt: time.Now().UTC()}
-	updated, err := a.store.CommitChat(session.ID, session.Version, userMessage, assistantMessage, result.State)
+
+	fmt.Printf("====> userMessage = [[[=========   %+v   =========]]]\n", request.Message)
+	fmt.Printf("====> assistantMessage = [[[=========   %+v   =========]]]\n", result.Answer)
+	fmt.Printf("====> result.State = [[[=========   %+v   =========]]]\n", result.State)
+
+	updated, err := api.store.CommitChat(session.ID, session.Version, userMessage, assistantMessage, result.State)
+	//fmt.Printf("====> updated = [[[=========   %+v   =========]]]\n", updated)
 	if errors.Is(err, ErrConflict) {
 		writeAPIError(w, http.StatusConflict, "session changed during this request; retry with the latest state")
 		return
@@ -146,12 +157,12 @@ func (a *API) chat(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusInternalServerError, "could not save conversation")
 		return
 	}
-	a.traces.Put(result.Trace)
+	api.traces.Put(result.Trace)
 	writeJSON(w, http.StatusOK, map[string]any{"session": updated, "answer": result.Answer, "traceId": result.TraceID})
 }
 
-func (a *API) getTrace(w http.ResponseWriter, r *http.Request) {
-	record, ok := a.traces.Get(r.PathValue("id"))
+func (api *API) getTrace(w http.ResponseWriter, r *http.Request) {
+	record, ok := api.traces.Get(r.PathValue("id"))
 	if !ok {
 		writeAPIError(w, http.StatusNotFound, "trace not found or expired")
 		return
@@ -159,9 +170,9 @@ func (a *API) getTrace(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, record)
 }
 
-func (a *API) protect(next http.Handler) http.Handler {
+func (api *API) protect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if a.token != "" && r.Header.Get("Authorization") != "Bearer "+a.token {
+		if api.token != "" && r.Header.Get("Authorization") != "Bearer "+api.token {
 			writeAPIError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
@@ -169,7 +180,7 @@ func (a *API) protect(next http.Handler) http.Handler {
 		if err != nil {
 			key = r.RemoteAddr
 		}
-		if !a.limiter.Allow(key, time.Now()) {
+		if !api.limiter.Allow(key, time.Now()) {
 			w.Header().Set("Retry-After", "60")
 			writeAPIError(w, http.StatusTooManyRequests, "rate limit exceeded")
 			return
@@ -178,17 +189,17 @@ func (a *API) protect(next http.Handler) http.Handler {
 	})
 }
 
-func (a *API) cors(next http.Handler) http.Handler {
+func (api *API) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if a.allowOrigin != "" && origin == a.allowOrigin {
+		if api.allowOrigin != "" && origin == api.allowOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		}
 		if r.Method == http.MethodOptions {
-			if origin != "" && origin != a.allowOrigin {
+			if origin != "" && origin != api.allowOrigin {
 				writeAPIError(w, http.StatusForbidden, "origin is not allowed")
 				return
 			}
