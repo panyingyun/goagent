@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -68,6 +69,7 @@ func (m *MathAgent) Process(ctx context.Context, session Session, userText strin
 	defer func() { finish(finalErr) }()
 
 	working := cloneGraphState(session.GraphState)
+	slog.Debug("cloned graph state", "working", working)
 	var operations []string
 	executor := agent.NewExecutor()
 	executor.Observer = recorder
@@ -119,6 +121,7 @@ func graphStateTool(state *GraphState) agent.Tool {
 		SideEffect: agent.SideEffectRead, Cacheable: false, ParallelSafe: true, Timeout: 2 * time.Second,
 		Run: func(context.Context, json.RawMessage) (string, error) {
 			data, err := json.Marshal(state)
+			slog.Debug("get_graph_state", "data", string(data))
 			return string(data), err
 		},
 	}
@@ -129,6 +132,7 @@ func graphPatchTool(state *GraphState, operations *[]string) agent.Tool {
 		Name: "apply_graph_patch", Description: "对当前会话的图形状态应用一个经过校验的原子补丁。",
 		Parameters: graphPatchSchema(), SideEffect: agent.SideEffectWrite, Idempotent: true, Timeout: 3 * time.Second,
 		Run: func(_ context.Context, arguments json.RawMessage) (string, error) {
+			slog.Debug("apply_graph_patch args", "arguments", string(arguments))
 			var patch GraphPatch
 			if err := decodeStrict(arguments, &patch); err != nil {
 				return "", fmt.Errorf("invalid graph patch: %w", err)
@@ -142,6 +146,7 @@ func graphPatchTool(state *GraphState, operations *[]string) agent.Tool {
 				*operations = append(*operations, patch.Operation)
 			}
 			data, err := json.Marshal(map[string]any{"ok": true, "operation": patch.Operation, "graphState": next})
+			slog.Debug("apply_graph_patch result", "data", string(data))
 			return string(data), err
 		},
 	}

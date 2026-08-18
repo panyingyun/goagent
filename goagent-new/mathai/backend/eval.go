@@ -157,9 +157,9 @@ func matchEvalCases(ctx context.Context, cases []eval.Case, run eval.RunFunc) []
 		out, err := run(ctx, testCase.Input)
 		// //fmt.Println("=====> input = ", testCase.Input)
 		// fmt.Println("=====> out = ", out.Tools)
-		if encoded, encodeErr := json.MarshalIndent(out, "", "  "); encodeErr == nil {
-			fmt.Println("=====> encoded = ", string(encoded))
-		}
+		// if encoded, encodeErr := json.MarshalIndent(out, "", "  "); encodeErr == nil {
+		// 	fmt.Println("=====> encoded = [[[  ", string(encoded), "   ]]]")
+		// }
 		if err != nil {
 			results = append(results, eval.Result{Case: testCase.Name, Reason: err.Error()})
 			continue
@@ -168,7 +168,7 @@ func matchEvalCases(ctx context.Context, cases []eval.Case, run eval.RunFunc) []
 		for i, use := range out.Tools {
 			actual[i] = use.Name
 		}
-		fmt.Println("actual = ", actual)
+		//fmt.Println("=====> actual = [[[  ", actual, "   ]]]")
 		if !isSubsequence(testCase.ExpectedTools, actual) {
 			results = append(results, eval.Result{Case: testCase.Name, Reason: fmt.Sprintf("tool trajectory: got %v want subsequence %v", actual, testCase.ExpectedTools)})
 			continue
@@ -201,9 +201,9 @@ func runEvalSuite(ctx context.Context, client llm.Client) ([]eval.Result, error)
 	run := func(ctx context.Context, input string) (eval.Outcome, error) {
 		result, err := NewMathAgent(client).Process(ctx, Session{ID: "eval", Version: 1, GraphState: DefaultGraphState()}, input)
 		//fmt.Println("====> result = ", result)
-		fmt.Println("====> result.Answer = ", result.Answer)
-		fmt.Println("====> result.Operations = ", result.Operations)
-		fmt.Println("====> result.State = ", result.State)
+		//fmt.Println("====> result.Answer = ", result.Answer)
+		//fmt.Println("====> result.Operations = ", result.Operations)
+		//fmt.Println("====> result.State = ", result.State)
 		if err != nil {
 			return eval.Outcome{}, err
 		}
