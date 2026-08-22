@@ -84,6 +84,7 @@ func (m *MathAgent) Process(ctx context.Context, session Session, userText strin
 	}
 
 	runner := &agent.Runner{LLM: m.client, Executor: executor, Observer: recorder, MaxRounds: 8}
+	slog.Debug("LLM Messages", "messages = ", buildMessages(session.Messages, userText))
 	answer, _, err := runner.Run(ctx, buildMessages(session.Messages, userText))
 	if err != nil {
 		return result, fmt.Errorf("run MathAI agent: %w", err)

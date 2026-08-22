@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"mathai/pkg/llm"
@@ -43,6 +44,7 @@ func (r *Runner) Run(ctx context.Context, messages []llm.Message) (string, []llm
 			return "", history, err
 		}
 		history = append(history, resp.Message)
+		slog.Debug("llm response", "round", round, "history", history)
 		if len(resp.Message.ToolCalls) == 0 {
 			if resp.Message.Content == "" {
 				return "", history, errors.New("llm returned neither content nor tool calls")
@@ -50,6 +52,7 @@ func (r *Runner) Run(ctx context.Context, messages []llm.Message) (string, []llm
 			return resp.Message.Content, history, nil
 		}
 		results := r.Executor.ExecuteBatch(ctx, resp.Message.ToolCalls)
+		slog.Debug("executor results", "round", round, "results", results)
 		for _, result := range results {
 			content := result.Out
 			if result.Err != nil {
@@ -64,4 +67,3 @@ func (r *Runner) Run(ctx context.Context, messages []llm.Message) (string, []llm
 	}
 	return "", history, fmt.Errorf("agent exceeded maximum rounds (%d)", maxRounds)
 }
-
