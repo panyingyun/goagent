@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -111,14 +111,14 @@ func (api *API) chat(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Println("====> request.Message = ", request.Message)
+	slog.Debug("chat request", "message", request.Message)
 
 	request.Message = strings.TrimSpace(request.Message)
 	if request.Message == "" || len(request.Message) > 4000 {
 		writeAPIError(w, http.StatusBadRequest, "message must contain 1 to 4000 characters")
 		return
 	}
-	fmt.Println("====>session id ) = ", r.PathValue("id"))
+	slog.Debug("chat session", "id", r.PathValue("id"))
 	session, err := api.store.Get(r.PathValue("id"))
 	if errors.Is(err, ErrNotFound) {
 		writeAPIError(w, http.StatusNotFound, err.Error())
@@ -132,7 +132,7 @@ func (api *API) chat(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := contextWithTimeout(r, 70*time.Second)
 	defer cancel()
 	result, err := api.agent.Process(ctx, session, request.Message)
-	//fmt.Println("====> result = ", result)
+	slog.Debug("chat result", "result", result)
 	if err != nil {
 		log.Printf("MathAI chat failed session=%s: %v", session.ID, err)
 		writeAPIError(w, http.StatusBadGateway, "MathAI request failed")
@@ -142,12 +142,10 @@ func (api *API) chat(w http.ResponseWriter, r *http.Request) {
 	userMessage := Message{ID: newID("msg"), Role: "user", Content: request.Message, CreatedAt: now}
 	assistantMessage := Message{ID: newID("msg"), Role: "assistant", Content: result.Answer, TraceID: result.TraceID, CreatedAt: time.Now().UTC()}
 
-	fmt.Printf("====> userMessage = [[[=========   %+v   =========]]]\n", request.Message)
-	fmt.Printf("====> assistantMessage = [[[=========   %+v   =========]]]\n", result.Answer)
-	fmt.Printf("====> result.State = [[[=========   %+v   =========]]]\n", result.State)
+	slog.Debug("chat messages", "user", request.Message, "assistant", result.Answer, "state", result.State)
 
 	updated, err := api.store.CommitChat(session.ID, session.Version, userMessage, assistantMessage, result.State)
-	//fmt.Printf("====> updated = [[[=========   %+v   =========]]]\n", updated)
+	slog.Debug("chat committed", "session", updated)
 	if errors.Is(err, ErrConflict) {
 		writeAPIError(w, http.StatusConflict, "session changed during this request; retry with the latest state")
 		return

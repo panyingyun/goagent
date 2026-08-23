@@ -103,6 +103,11 @@ type SettingsUpdate struct {
 	SampleCount *int  `json:"sampleCount,omitempty"`
 }
 
+type DollarPowerInput struct {
+	Base     float64 `json:"base"`
+	Exponent float64 `json:"exponent"`
+}
+
 type TraceRecord struct {
 	ID        string    `json:"id"`
 	SessionID string    `json:"sessionId"`

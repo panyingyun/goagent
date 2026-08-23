@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -155,11 +156,7 @@ func matchEvalCases(ctx context.Context, cases []eval.Case, run eval.RunFunc) []
 	results := make([]eval.Result, 0, len(cases))
 	for _, testCase := range cases {
 		out, err := run(ctx, testCase.Input)
-		// //fmt.Println("=====> input = ", testCase.Input)
-		// fmt.Println("=====> out = ", out.Tools)
-		// if encoded, encodeErr := json.MarshalIndent(out, "", "  "); encodeErr == nil {
-		// 	fmt.Println("=====> encoded = [[[  ", string(encoded), "   ]]]")
-		// }
+		slog.Debug("eval case", "input", testCase.Input, "outcome", out)
 		if err != nil {
 			results = append(results, eval.Result{Case: testCase.Name, Reason: err.Error()})
 			continue
@@ -168,7 +165,7 @@ func matchEvalCases(ctx context.Context, cases []eval.Case, run eval.RunFunc) []
 		for i, use := range out.Tools {
 			actual[i] = use.Name
 		}
-		//fmt.Println("=====> actual = [[[  ", actual, "   ]]]")
+		slog.Debug("eval trajectory", "actual", actual)
 		if !isSubsequence(testCase.ExpectedTools, actual) {
 			results = append(results, eval.Result{Case: testCase.Name, Reason: fmt.Sprintf("tool trajectory: got %v want subsequence %v", actual, testCase.ExpectedTools)})
 			continue
@@ -194,16 +191,13 @@ func runEvalSuite(ctx context.Context, client llm.Client) ([]eval.Result, error)
 		return nil, err
 	}
 	cases, err := evalCasesFromFile(fileCases)
-	//fmt.Println("====> cases = ", cases)
+	slog.Debug("eval cases loaded", "cases", cases)
 	if err != nil {
 		return nil, err
 	}
 	run := func(ctx context.Context, input string) (eval.Outcome, error) {
 		result, err := NewMathAgent(client).Process(ctx, Session{ID: "eval", Version: 1, GraphState: DefaultGraphState()}, input)
-		//fmt.Println("====> result = ", result)
-		//fmt.Println("====> result.Answer = ", result.Answer)
-		//fmt.Println("====> result.Operations = ", result.Operations)
-		//fmt.Println("====> result.State = ", result.State)
+		slog.Debug("eval chat result", "result", result, "answer", result.Answer, "operations", result.Operations, "state", result.State)
 		if err != nil {
 			return eval.Outcome{}, err
 		}
